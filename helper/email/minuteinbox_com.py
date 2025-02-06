@@ -48,7 +48,8 @@ class Minuteinboxcom:
                     code_element = self.tab.ele("xpath=//div[@class='base-layout-root']")
                     if not code_element:
                         code_element = self.tab.ele("xpath=/html/body/div[2]/table[2]/tbody/tr/td/div/table/tbody/tr/td/div/table/tbody/tr/td/table/tbody/tr[5]/td/div")
-                    print("code_element:", code_element.text)
+                    safe_text = code_element.text.encode("utf-8", errors="replace").decode("utf-8")
+                    print("code_element:", safe_text)
                     if code_element:
                         return {
                             "text": code_element.text
