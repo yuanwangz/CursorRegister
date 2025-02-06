@@ -118,6 +118,7 @@ class CursorRegister:
 
             data = email_queue.get(timeout=60)
             message = data.get("text", None)
+            print("code:", message)
             assert None not in [data, message], "Fail to get email."
 
             message = message.replace(" ", "")
@@ -482,7 +483,9 @@ if __name__ == "__main__":
 
     print(f"[Register] Start to register {number} accounts in {max_workers} threads")
     account_infos = register_cursor(number, max_workers)
+    print(account_infos)
     tokens = list(set([row['token'] for row in account_infos]))
+    print(tokens)
     print(f"[Register] Register {len(tokens)} accounts successfully")
     
     if use_oneapi and len(account_infos) > 0:
