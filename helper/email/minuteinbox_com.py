@@ -33,7 +33,7 @@ class Minuteinboxcom:
 
         while time.time() - start_time <= timeout:
             try:
-                # self.tab.refresh()
+                self.tab.refresh()
                 # self.tab.wait(2)
                     
                 # 尝试多种选择器
@@ -45,9 +45,10 @@ class Minuteinboxcom:
                 if email_elements:
                     print("find cursor email,click..")
                     email_elements[0].click()
-                    self.tab.wait(2)
+                    # self.tab.wait(2)
                     try:                  
-                        code_element = self.tab.ele("xpath=/html/body/div[2]/table[2]/tbody/tr/td/div/table/tbody/tr/td/div/table/tbody/tr/td/table/tbody/tr[5]/td/div")
+                        # code_element = self.tab.ele("xpath=/html/body/div[2]/table[2]/tbody/tr/td/div/table/tbody/tr/td/div/table/tbody/tr/td/table/tbody/tr[5]/td/div")
+                        code_element = self.tab.ele("xpath=//div[@class='base-layout-root']")
                         if code_element:
                             return {
                                 "text": code_element.text
