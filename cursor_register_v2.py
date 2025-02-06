@@ -115,6 +115,7 @@ class CursorRegister:
         # Get email verification code
         try:
             verify_code = None
+            message = None
 
             data = email_queue.get(timeout=60)
             message = data.get("text", None)
@@ -122,7 +123,12 @@ class CursorRegister:
             assert None not in [data, message], "Fail to get email."
 
             message = message.replace(" ", "")
-            verify_code = re.search(r'(?:\r?\n)(\d{6})(?:\r?\n)', message).group(1)
+            
+            if message.isdigit() and len(message) == 6:
+                verify_code = message
+            else:
+                verify_code = re.search(r'(?:\r?\n)(\d{6})(?:\r?\n)', message).group(1)
+            
             assert verify_code is not None, "Fail to get code from email."
         except Exception as e:
             print(f"[Register][{self.thread_id}] Fail to get code from email.")
@@ -146,7 +152,7 @@ class CursorRegister:
                 print(f"[Register][{self.thread_id}] Exception when handling email code page.")
                 print(e)
 
-            if tab.wait.url_change(CURSOR_URL, timeout=3):
+            if tab.wait.url_change(CURSOR_URL, timeout=5):
                 break
 
             tab.refresh()
@@ -483,9 +489,7 @@ if __name__ == "__main__":
 
     print(f"[Register] Start to register {number} accounts in {max_workers} threads")
     account_infos = register_cursor(number, max_workers)
-    print(account_infos)
     tokens = list(set([row['token'] for row in account_infos]))
-    print(tokens)
     print(f"[Register] Register {len(tokens)} accounts successfully")
     
     if use_oneapi and len(account_infos) > 0:
