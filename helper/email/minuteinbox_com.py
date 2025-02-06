@@ -13,6 +13,7 @@ class Minuteinboxcom:
 
         for _ in range(5):
             try:
+                self.tab.refresh()
                 self.tab.wait(2)
                 email = self.tab.ele("xpath=//span[@id='email']", timeout=5).text
                 if email != "":
