@@ -40,10 +40,11 @@ class Minuteinboxcom:
                     print("email_from:", element.text)
                     if "Cursor" in element.text:
                         try:
+                            self.tab.run_js("arguments[0].scrollIntoView(true)", element)
+                            self.tab.wait(2)
                             element.click()
                         except Exception as e:
                             print("click email error,try scroll and js click:", e)
-                            self.tab.run_js("arguments[0].scrollIntoView();", element)
                             self.tab.run_js("arguments[0].click();", element)
                         break
                 print("click email success")
