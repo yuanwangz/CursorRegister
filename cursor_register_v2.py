@@ -383,7 +383,6 @@ class CursorRegister:
                 data["text"] = data["text"].encode("raw_unicode_escape").decode("utf-8")
             queue.put(copy.deepcopy(data))
         except Exception as e:
-            print(e)
             queue.put(None)
 
 def register_pipeline(options):

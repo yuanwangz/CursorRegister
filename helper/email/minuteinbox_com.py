@@ -37,18 +37,18 @@ class Minuteinboxcom:
                 # self.tab.refresh()
                 email_elements = self.tab.eles("css=span.odMobil")
                 for element in email_elements:
-                    print("email_from:", element.text)
                     if "Cursor" in element.text:
+                        print("email_from:", element.text)
                         element.click(by_js=True)
                         email_click_flag = True
                         break
                 if email_click_flag:
-                    self.tab.wait(2)
+                    # self.tab.wait(2)
                     print("click email success")
                     code_element = self.tab.ele("xpath=/html/body/div[2]/table[2]/tbody/tr/td/div/table/tbody/tr/td/div/table/tbody/tr/td/table/tbody/tr[5]/td/div")
                     if not code_element:
                         code_element = self.tab.ele("xpath=//div[@class='base-layout-root']")
-                    print("code_element:", repr(code_element.text))
+                    # print("code_element:", repr(code_element.text))
                     if code_element:
                         return {
                             "text": code_element.text
