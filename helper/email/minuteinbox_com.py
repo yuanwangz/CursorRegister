@@ -43,10 +43,12 @@ class Minuteinboxcom:
                         email_click_flag = True
                         break
                 if email_click_flag:
+                    self.tab.wait(2)
                     print("click email success")
                     code_element = self.tab.ele("xpath=//div[@class='base-layout-root']")
                     if not code_element:
-                        code_element = self.email_tab.ele("xpath=/html/body/div[2]/table[2]/tbody/tr/td/div/table/tbody/tr/td/div/table/tbody/tr/td/table/tbody/tr[5]/td/div")
+                        code_element = self.tab.ele("xpath=/html/body/div[2]/table[2]/tbody/tr/td/div/table/tbody/tr/td/div/table/tbody/tr/td/table/tbody/tr[5]/td/div")
+                    print("code_element:", code_element.text)
                     if code_element:
                         return {
                             "text": code_element.text
