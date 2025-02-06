@@ -42,6 +42,8 @@ class Minuteinboxcom:
                     if "Cursor" in element.text:
                         element.click()
                         break
+                print("click email success")
+                self.tab.wait(3)
                 code_element = self.tab.ele("xpath=//div[@class='base-layout-root']")
                 # code_element = self.tab.ele("xpath=/html/body/div[2]/table[2]/tbody/tr/td/div/table/tbody/tr/td/div/table/tbody/tr/td/table/tbody/tr[5]/td/div")
                 if code_element:
