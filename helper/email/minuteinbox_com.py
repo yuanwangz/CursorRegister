@@ -42,8 +42,8 @@ class Minuteinboxcom:
                             element.click()
                         except Exception as e:
                             print("click email error,try scroll and js click:", e)
-                            self.tab.driver.execute_script("arguments[0].scrollIntoView();", element)
-                            self.tab.driver.execute_script("arguments[0].click();", element)
+                            self.tab.run_js("arguments[0].scrollIntoView();", element)
+                            self.tab.run_js("arguments[0].click();", element)
                         break
                 print("click email success")
                 self.tab.wait(2)
