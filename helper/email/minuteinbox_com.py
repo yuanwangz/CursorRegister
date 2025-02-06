@@ -35,28 +35,15 @@ class Minuteinboxcom:
             try:
                 self.tab.refresh()
                 # self.tab.wait(2)
-                    
-                # 尝试多种选择器
-                email_elements = self.tab.eles("xpath=//span[contains(text(), 'Cursor')]")
-                if not email_elements:
-                    email_elements = self.tab.eles("xpath=//div[contains(text(), 'Cursor')]")
-                if not email_elements:
-                    email_elements = self.tab.eles("xpath=//*[contains(text(), 'Cursor')]")
-                if email_elements:
-                    print("find cursor email,click..")
-                    email_elements[0].click()
-                    # self.tab.wait(2)
-                    try:                  
-                        # code_element = self.tab.ele("xpath=/html/body/div[2]/table[2]/tbody/tr/td/div/table/tbody/tr/td/div/table/tbody/tr/td/table/tbody/tr[5]/td/div")
-                        code_element = self.tab.ele("xpath=//div[@class='base-layout-root']")
-                        if code_element:
-                            return {
-                                "text": code_element.text
-                            }
-                        else:
-                            print("not found code")
-                    except Exception as e:
-                        print(f"click email or get content error: {e}")
+                self.tab.ele("xpath=//td[contains(text(), 'Cursor')]").click()
+                code_element = self.tab.ele("xpath=//div[@class='base-layout-root']")
+                # code_element = self.tab.ele("xpath=/html/body/div[2]/table[2]/tbody/tr/td/div/table/tbody/tr/td/div/table/tbody/tr/td/table/tbody/tr[5]/td/div")
+                if code_element:
+                    return {
+                        "text": code_element.text
+                    }
+                else:
+                    print("not found code")
             except Exception as e:
                 print(e)
                 pass
