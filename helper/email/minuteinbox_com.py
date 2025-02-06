@@ -34,18 +34,21 @@ class Minuteinboxcom:
         while time.time() - start_time <= timeout:
             try:
                 self.tab.refresh()
-                # self.tab.wait(2)
-                # self.tab.ele("xpath=//td[contains(text(), 'Cursor')]").click()
                 email_elements = self.tab.eles("css=tr > td.from")
                 for element in email_elements:
-                    print("email_from:",element.text)
+                    print("email_from:", element.text)
                     if "Cursor" in element.text:
-                        element.click()
+                        try:
+                            element.click()
+                        except Exception as e:
+                            print("普通点击失败，尝试使用JS点击:", e)
+                            # 先将元素滚动到视野内，再用js点击
+                            self.tab.run_script("arguments[0].scrollIntoView();", element)
+                            self.tab.run_script("arguments[0].click();", element)
                         break
                 print("click email success")
-                self.tab.wait(3)
+                self.tab.wait(2)
                 code_element = self.tab.ele("xpath=//div[@class='base-layout-root']")
-                # code_element = self.tab.ele("xpath=/html/body/div[2]/table[2]/tbody/tr/td/div/table/tbody/tr/td/div/table/tbody/tr/td/table/tbody/tr[5]/td/div")
                 if code_element:
                     return {
                         "text": code_element.text
@@ -53,7 +56,7 @@ class Minuteinboxcom:
             except Exception as e:
                 print(e)
                 pass
-            print("not found code,wait 5 seconds..")
+            print("not found code, wait 5 seconds..")
             self.tab.wait(delay)
 
         return None
