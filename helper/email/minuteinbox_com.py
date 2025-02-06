@@ -35,15 +35,19 @@ class Minuteinboxcom:
             try:
                 self.tab.refresh()
                 # self.tab.wait(2)
-                self.tab.ele("xpath=//td[contains(text(), 'Cursor')]").click()
+                # self.tab.ele("xpath=//td[contains(text(), 'Cursor')]").click()
+                email_elements = self.tab.eles("css=tr > td.from")
+                for element in email_elements:
+                    print("email_from:",element.text)
+                    if "Cursor" in element.text:
+                        element.click()
+                        break
                 code_element = self.tab.ele("xpath=//div[@class='base-layout-root']")
                 # code_element = self.tab.ele("xpath=/html/body/div[2]/table[2]/tbody/tr/td/div/table/tbody/tr/td/div/table/tbody/tr/td/table/tbody/tr[5]/td/div")
                 if code_element:
                     return {
                         "text": code_element.text
                     }
-                else:
-                    print("not found code")
             except Exception as e:
                 print(e)
                 pass
