@@ -10,6 +10,9 @@ on:
       ingest_to_oneapi:
         description: 'Ingest account tokens to OneAPI'
         type: boolean
+      ingest_to_custom_api:
+        description: 'Ingest account tokens to Custom API'
+        type: boolean
       upload_artifact:
         description: 'Upload account infos to artifact'
         type: boolean
@@ -33,8 +36,12 @@ jobs:
         if: ${{ github.event.inputs.ingest_to_oneapi == 'true' }}
         run: |
           python3 ./cursor_register_v2.py --oneapi --oneapi_url "${{ secrets.CURSOR_ONEAPI_URL }}" --oneapi_token "${{ secrets.CURSOR_ONEAPI_TOKEN }}" --oneapi_channel_url "${{ secrets.CURSOR_CHANNEL_URL }}" --number ${{ github.event.inputs.number }} --max_workers ${{ github.event.inputs.max_workers }} 
+      - name: Run script for Custom API
+        if: ${{ github.event.inputs.ingest_to_custom_api == 'true' }}
+        run: |
+          python3 ./cursor_register_v2.py --custom-api --api_url "${{ secrets.CUSTOM_API_URL }}" --number ${{ github.event.inputs.number }} --max_workers ${{ github.event.inputs.max_workers }}
       - name: Run script for csv
-        if: ${{ github.event.inputs.ingest_to_oneapi == 'false' && github.event.inputs.upload_artifact == 'true' }}
+        if: ${{ github.event.inputs.ingest_to_oneapi == 'false' && github.event.inputs.ingest_to_custom_api == 'false' && github.event.inputs.upload_artifact == 'true' }}
         run: |
           python3 ./cursor_register_v2.py --number ${{ github.event.inputs.number }} --max_workers ${{ github.event.inputs.max_workers }}       
       - name: Upload csv files to artifact

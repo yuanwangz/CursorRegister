@@ -465,6 +465,9 @@ if __name__ == "__main__":
     parser.add_argument('--oneapi_url', type=str, required=False, help='URL link for One-API website')
     parser.add_argument('--oneapi_token', type=str, required=False, help='Token for One-API website')
     parser.add_argument('--oneapi_channel_url', type=str, required=False, help='Base url for One-API channel')
+    
+    parser.add_argument('--custom-api', action='store_true', help='Enable Custom-API or not')
+    parser.add_argument('--api_url', type=str, required=False, help='URL link for Custom-API website')
 
     args = parser.parse_args()
     number = args.number
@@ -473,6 +476,9 @@ if __name__ == "__main__":
     oneapi_url = args.oneapi_url
     oneapi_token = args.oneapi_token
     oneapi_channel_url = args.oneapi_channel_url
+
+    use_custom_api = args.custom_api
+    api_url = args.api_url
 
     print(f"[Register] Start to register {number} accounts in {max_workers} threads")
     account_infos = register_cursor(number, max_workers)
@@ -494,3 +500,10 @@ if __name__ == "__main__":
                                           '\n'.join(batch),
                                           Cursor.models)
             print(f'[OneAPI] Add Channel Request For Batch {idx}. Status Code: {response.status_code}, Response Body: {response.json()}')
+    elif use_custom_api and len(account_infos) > 0:
+        from tokenManager.custom_api_manager import CustomAPIManager
+        custom_api = CustomAPIManager(api_url)
+        for token in tokens:
+            response = custom_api.upload_tokens(token)
+            print(f'[Custom-API] Upload Token. Status Code: {response.status_code}, Response Body: {response.json()}')
+        print(f"[Custom-API] Upload {len(tokens)} tokens successfully")
