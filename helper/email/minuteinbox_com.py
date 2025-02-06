@@ -35,25 +35,21 @@ class Minuteinboxcom:
         while time.time() - start_time <= timeout:
             try:
                 self.tab.refresh()
-                email_elements = self.tab.eles("css=tr > td.from")
+                email_elements = self.tab.eles("css=span.odMobil")
+                email_click_flag = False
                 for element in email_elements:
                     print("email_from:", element.text)
                     if "Cursor" in element.text:
-                        try:
-                            self.tab.run_js("arguments[0].scrollIntoView(true)", element)
-                            self.tab.wait(2)
-                            element.click()
-                        except Exception as e:
-                            print("click email error,try scroll and js click:", e)
-                            self.tab.run_js("arguments[0].click();", element)
+                        element.click(by_js=True)
+                        email_click_flag = True
                         break
-                print("click email success")
-                self.tab.wait(2)
-                code_element = self.tab.ele("xpath=//div[@class='base-layout-root']")
-                if code_element:
-                    return {
-                        "text": code_element.text
-                    }
+                if email_click_flag:
+                    print("click email success")
+                    code_element = self.tab.ele("xpath=//div[@class='base-layout-root']")
+                    if code_element:
+                        return {
+                            "text": code_element.text
+                        }
             except Exception as e:
                 print(e)
                 pass
