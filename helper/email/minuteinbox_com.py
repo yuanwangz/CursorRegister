@@ -41,8 +41,7 @@ class Minuteinboxcom:
                         try:
                             element.click()
                         except Exception as e:
-                            print("普通点击失败，尝试使用JS点击:", e)
-                            # 先将元素滚动到视野内，再用js点击
+                            print("click email error,try scroll and js click:", e)
                             self.tab.run_script("arguments[0].scrollIntoView();", element)
                             self.tab.run_script("arguments[0].click();", element)
                         break
