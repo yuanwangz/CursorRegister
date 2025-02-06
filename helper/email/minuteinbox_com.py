@@ -31,12 +31,11 @@ class Minuteinboxcom:
         
     def wait_for_message(self, delay=5, timeout=60):
         start_time = time.time()
-
+        email_click_flag = False
         while time.time() - start_time <= timeout:
             try:
                 self.tab.refresh()
                 email_elements = self.tab.eles("css=span.odMobil")
-                email_click_flag = False
                 for element in email_elements:
                     print("email_from:", element.text)
                     if "Cursor" in element.text:
