@@ -430,6 +430,7 @@ def register_cursor(number, max_workers):
         chrome_version = "130.0.0.0"        
         options.set_user_agent(f"Mozilla/5.0 ({platformIdentifier}) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/{chrome_version} Safari/537.36")
         options.headless()
+        options.set_argument('--window-size=1920,1080')
 
     # Run the code using multithreading
     results = []
