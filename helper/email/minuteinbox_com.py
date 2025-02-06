@@ -34,7 +34,7 @@ class Minuteinboxcom:
         email_click_flag = False
         while time.time() - start_time <= timeout:
             try:
-                self.tab.refresh()
+                # self.tab.refresh()
                 email_elements = self.tab.eles("css=span.odMobil")
                 for element in email_elements:
                     print("email_from:", element.text)
@@ -45,6 +45,8 @@ class Minuteinboxcom:
                 if email_click_flag:
                     print("click email success")
                     code_element = self.tab.ele("xpath=//div[@class='base-layout-root']")
+                    if not code_element:
+                        code_element = self.email_tab.ele("xpath=/html/body/div[2]/table[2]/tbody/tr/td/div/table/tbody/tr/td/div/table/tbody/tr/td/table/tbody/tr[5]/td/div")
                     if code_element:
                         return {
                             "text": code_element.text
