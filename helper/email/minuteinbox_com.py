@@ -45,9 +45,9 @@ class Minuteinboxcom:
                 if email_click_flag:
                     self.tab.wait(2)
                     print("click email success")
-                    code_element = self.tab.ele("xpath=//div[@class='base-layout-root']")
+                    code_element = self.tab.ele("xpath=/html/body/div[2]/table[2]/tbody/tr/td/div/table/tbody/tr/td/div/table/tbody/tr/td/table/tbody/tr[5]/td/div")
                     if not code_element:
-                        code_element = self.tab.ele("xpath=/html/body/div[2]/table[2]/tbody/tr/td/div/table/tbody/tr/td/div/table/tbody/tr/td/table/tbody/tr[5]/td/div")
+                        code_element = self.tab.ele("xpath=//div[@class='base-layout-root']")
                     print("code_element:", repr(code_element.text))
                     if code_element:
                         return {
@@ -56,7 +56,7 @@ class Minuteinboxcom:
             except Exception as e:
                 print(e)
                 pass
-            print("not found code, wait 5 seconds..")
+            # print("not found code, wait 5 seconds..")
             self.tab.wait(delay)
 
         return None

@@ -127,7 +127,7 @@ class CursorRegister:
             if message.isdigit() and len(message) == 6:
                 verify_code = message
             else:
-                verify_code = re.search(r'(?:\r?\n)(\d{6})(?:\r?\n)', message).group(1)
+                verify_code = re.search(r'(\d{6})', message).group(1)
             
             assert verify_code is not None, "Fail to get code from email."
         except Exception as e:
@@ -379,8 +379,11 @@ class CursorRegister:
     def _wait_for_new_message(self, queue, timeout=300):
         try:
             data = self.email_server.wait_for_message(delay=1, timeout=timeout)
+            if data and "text" in data:
+                data["text"] = data["text"].encode("raw_unicode_escape").decode("utf-8")
             queue.put(copy.deepcopy(data))
         except Exception as e:
+            print(e)
             queue.put(None)
 
 def register_pipeline(options):
