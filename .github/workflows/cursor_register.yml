@@ -5,8 +5,10 @@ on:
     inputs:
       number:
         default: "2"
+        type: number
       max_workers:
         default: "1"
+        type: number
       ingest_to_oneapi:
         description: 'Ingest account tokens to OneAPI'
         type: boolean
