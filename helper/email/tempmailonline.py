@@ -3,10 +3,10 @@ from DrissionPage import Chromium
 
 class TempMailOnline:
 
-    ETEMPMAIL_URL = "https://tempmailonline.co"
+    TEMPMAILONLINE_URL = "https://tempmailonline.co"
 
     def __init__(self, browser: Chromium):
-        self.tab = browser.new_tab(self.ETEMPMAIL_URL)
+        self.tab = browser.new_tab(self.TEMPMAILONLINE_URL)
 
     def get_email_address(self):
         email_address = None
@@ -62,7 +62,7 @@ class TempMailOnline:
 
 if __name__ == "__main__":
     browser = Chromium()
-    email_server = EtempMail(browser)
+    email_server = TempMailOnline(browser)
     email = email_server.get_email_address()
     print(email)
     message = email_server.wait_for_message().get("text", None)
