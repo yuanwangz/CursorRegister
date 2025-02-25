@@ -51,16 +51,24 @@ class EtempMail:
                     # 切换到iframe再获取body内容
                     iframe = self.tab.get_frame('css=iframe', timeout=5)
                     if iframe:
-                        # 直接使用iframe对象获取内部元素
-                        code_element = iframe.ele("css=tbody")
+                        # 尝试多种可能的选择器来获取内容
+                        try:
+                            code_element = iframe.ele("css=body", timeout=3)
+                        except:
+                            try:
+                                code_element = iframe.ele("css=tbody", timeout=3)
+                            except:
+                                code_element = None
                     else:
-                        code_element = self.tab.ele("css=body")  # 如果没有iframe，尝试直接获取
+                        code_element = self.tab.ele("css=body", timeout=3)  # 如果没有iframe，尝试直接获取
                    
-                    print("code_element:", repr(code_element.text))
                     if code_element:
+                        print("code_element:", repr(code_element.text))
                         return {
                             "text": code_element.text
                         }
+                    else:
+                        print("Failed to find content element in iframe or body")
             except Exception as e:
                 print(e)
                 pass
