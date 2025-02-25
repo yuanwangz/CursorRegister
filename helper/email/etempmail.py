@@ -51,15 +51,17 @@ class EtempMail:
                     
                     # 使用API获取邮件内容
                     try:
+                        import requests
+                        
                         # 获取当前页面的cookies
                         cookies = {}
-                        for cookie in self.tab.get_cookies():
-                            cookies[cookie['name']] = cookie['value']
+                        # 使用正确的方法获取cookies
+                        cookies_dict = self.tab.cookies().as_dict()
                         
-                        print("Got cookies:", cookies)
+                        print("Got cookies:", cookies_dict)
                         
                         # 发起API请求获取收件箱
-                        r = requests.post("https://etempmail.com/getInbox", cookies=cookies)
+                        r = requests.post("https://etempmail.com/getInbox", cookies=cookies_dict)
                         if r.ok:
                             emails = r.json()
                             print(f"Found {len(emails)} emails via API")
