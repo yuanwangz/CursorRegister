@@ -75,8 +75,9 @@ class EtempMail:
                                     if code_match:
                                         code = code_match.group(1)
                                         print(f"Extracted verification code: {code}")
+                                        return {"text": code}
                                     
-                                    return {"text": content}
+                                    return {"text": ''}
                         else:
                             print(f"API request failed: {r.status_code} - {r.text}")
                     except Exception as e:
