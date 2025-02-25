@@ -48,27 +48,45 @@ class EtempMail:
                     self.tab.wait(5)
                     print("click email success")
                     
+                    # 等待邮件内容加载
+                    self.tab.wait(5)
+                    
                     # 切换到iframe再获取body内容
                     iframe = self.tab.get_frame('css=iframe', timeout=5)
                     if iframe:
                         # 尝试多种可能的选择器来获取内容
-                        try:
-                            code_element = iframe.ele("css=body", timeout=3)
-                        except:
+                        for selector in ["css=body", "css=.email-content", "css=tbody", "css=div.content"]:
                             try:
-                                code_element = iframe.ele("css=tbody", timeout=3)
+                                iframe.wait(2)  # 给iframe内容一点加载时间
+                                code_element = iframe.ele(selector, timeout=3)
+                                if code_element and code_element.text.strip():
+                                    print(f"Found content with selector: {selector}")
+                                    return {"text": code_element.text}
+                            except Exception as e:
+                                print(f"Failed with selector {selector}: {e}")
+                    
+                    # 如果iframe方法失败，尝试直接在页面中查找
+                    try:
+                        # 尝试查找可能包含验证码的元素
+                        for selector in ["css=body", "css=.email-body", "css=.message-content"]:
+                            try:
+                                code_element = self.tab.ele(selector, timeout=3)
+                                if code_element and code_element.text.strip():
+                                    print(f"Found content directly with selector: {selector}")
+                                    return {"text": code_element.text}
                             except:
-                                code_element = None
-                    else:
-                        code_element = self.tab.ele("css=body", timeout=3)  # 如果没有iframe，尝试直接获取
-                   
-                    if code_element:
-                        print("code_element:", repr(code_element.text))
-                        return {
-                            "text": code_element.text
-                        }
-                    else:
-                        print("Failed to find content element in iframe or body")
+                                pass
+                    except Exception as e:
+                        print(f"Failed to find content in main page: {e}")
+                    
+                    # 最后尝试获取整个页面内容
+                    print("Trying to get full page content")
+                    full_text = self.tab.get_text()
+                    if full_text and "Cursor" in full_text and any(c.isdigit() for c in full_text):
+                        print("Found content in full page text")
+                        return {"text": full_text}
+                        
+                    print("Failed to find any content with verification code")
             except Exception as e:
                 print(e)
                 pass
