@@ -48,8 +48,9 @@ class EtempMail:
                     self.tab.wait(5)
                     print("click email success")
                     
-                    # 等待邮件内容加载
-                    self.tab.wait(5)
+                    # 直接加载邮件详情页面
+                    self.tab.get("https://etempmail.com/email?id=1")
+                    self.tab.wait(5)  # 等待页面加载
                     
                     # 首先尝试获取所有iframe
                     iframes = self.tab.eles('css=iframe', timeout=5)
