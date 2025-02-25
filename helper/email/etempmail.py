@@ -1,5 +1,6 @@
 import time
 from DrissionPage import Chromium
+import requests
 
 class EtempMail:
 
@@ -48,9 +49,37 @@ class EtempMail:
                     self.tab.wait(5)
                     print("click email success")
                     
-                    # 直接加载邮件详情页面
-                    self.tab.get("https://etempmail.com/email?id=1")
-                    self.tab.wait(5)  # 等待页面加载
+                    # 使用API获取邮件内容
+                    try:
+                        # 获取当前页面的cookies
+                        cookies = {}
+                        for cookie in self.tab.get_cookies():
+                            cookies[cookie['name']] = cookie['value']
+                        
+                        print("Got cookies:", cookies)
+                        
+                        # 发起API请求获取收件箱
+                        r = requests.post("https://etempmail.com/getInbox", cookies=cookies)
+                        if r.ok:
+                            emails = r.json()
+                            print(f"Found {len(emails)} emails via API")
+                            
+                            for email in emails:
+                                content = email.get("body", "")
+                                print(f"Email from: {email.get('from', 'unknown')}")
+                                print(f"Subject: {email.get('subject', 'no subject')}")
+                                print(f"Content preview: {content[:100]}...")
+                                
+                                if "Sign up for Cursor" in content and any(c.isdigit() for c in content):
+                                    print("Found verification email content via API!")
+                                    return {"text": content}
+                        else:
+                            print(f"API request failed: {r.status_code} - {r.text}")
+                    except Exception as e:
+                        print(f"Error using API method: {e}")
+                    
+                    # 如果API方法失败，回退到iframe检查方法
+                    print("Falling back to iframe method...")
                     
                     # 首先尝试获取所有iframe
                     iframes = self.tab.eles('css=iframe', timeout=5)
