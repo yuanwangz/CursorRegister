@@ -15,7 +15,7 @@ class EtempMail:
         for _ in range(5):
             try:
                 self.tab.refresh()
-                self.tab.wait(5)
+                self.tab.wait(6)
                 email = self.tab.ele("xpath=//input[@id='tempEmailAddress']", timeout=5).value
                 if email != "" and email != "Please wait..":
                     email_address = email
@@ -45,10 +45,16 @@ class EtempMail:
                         email_click_flag = True
                         break
                 if email_click_flag:
-                    # self.tab.wait(2)
+                    self.tab.wait(3)
                     print("click email success")
                     
-                    code_element = self.tab.ele("css=body")
+                    # 切换到iframe再获取body内容
+                    iframe = self.tab.get_frame('css=iframe', timeout=5)
+                    if iframe:
+                        # 直接使用iframe对象获取内部元素
+                        code_element = iframe.ele("css=body")
+                    else:
+                        code_element = self.tab.ele("css=body")  # 如果没有iframe，尝试直接获取
                    
                     # print("code_element:", repr(code_element.text))
                     if code_element:

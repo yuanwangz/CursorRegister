@@ -12,6 +12,8 @@ from datetime import datetime
 from DrissionPage import ChromiumOptions, Chromium
 from temp_mails import Tempmail_io, Guerillamail_com
 from helper.email.minuteinbox_com import Minuteinboxcom
+from helper.email.etempmail import EtempMail
+from helper.email.tempmailonline import TempMailOnline
 from helper.email import EmailServer
 
 CURSOR_URL = "https://www.cursor.com/"
@@ -43,7 +45,9 @@ class CursorRegister:
 
     def sign_in(self, email, password = None):
 
-        mail = Minuteinboxcom(self.browser)
+        # mail = Minuteinboxcom(self.browser)
+        mail = EtempMail(self.browser)
+        # mail = TempMailOnline(self.browser)
         self.email_server = mail
         email = mail.get_email_address()
 
