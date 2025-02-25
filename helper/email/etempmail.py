@@ -45,18 +45,18 @@ class EtempMail:
                         email_click_flag = True
                         break
                 if email_click_flag:
-                    self.tab.wait(3)
+                    self.tab.wait(5)
                     print("click email success")
                     
                     # 切换到iframe再获取body内容
                     iframe = self.tab.get_frame('css=iframe', timeout=5)
                     if iframe:
                         # 直接使用iframe对象获取内部元素
-                        code_element = iframe.ele("css=body")
+                        code_element = iframe.ele("css=tbody")
                     else:
                         code_element = self.tab.ele("css=body")  # 如果没有iframe，尝试直接获取
                    
-                    # print("code_element:", repr(code_element.text))
+                    print("code_element:", repr(code_element.text))
                     if code_element:
                         return {
                             "text": code_element.text
