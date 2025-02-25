@@ -63,53 +63,30 @@ class EtempMail:
                                 continue
                                 
                             print(f"Checking iframe #{i+1}")
-                            for selector in ["css=body", "css=.email-content", "css=tbody", "css=div.content"]:
-                                try:
-                                    iframe.wait(1)
-                                    content = iframe.ele(selector, timeout=2)
-                                    if content and content.text.strip():
-                                        text = content.text.strip()
-                                        print(f"Found content in iframe #{i+1} with selector {selector}: {text[:50]}...")
-                                        if any(c.isdigit() for c in text):  # 确保文本中包含数字(可能是验证码)
-                                            return {"text": text}
-                                except Exception as e:
-                                    pass
+                            try:
+                                content = iframe.ele("css=body", timeout=2)
+                                if content and content.text.strip():
+                                    text = content.text.strip()
+                                    print(f"Found content in iframe #{i+1}: {text[:100]}...")
+                                    if "Sign up for Cursor" in text and any(c.isdigit() for c in text):
+                                        print("Found verification email content!")
+                                        return {"text": text}
+                            except Exception as e:
+                                print(f"Error getting body in iframe #{i+1}: {e}")
                         except Exception as e:
                             print(f"Error processing iframe #{i+1}: {e}")
-                    
-                    # 尝试查找可能包含验证码的元素
-                    print("Checking main page content")
-                    for selector in ["css=body", "css=.email-body", "css=.message-content", "css=.mail-content"]:
-                        try:
-                            content = self.tab.ele(selector, timeout=2)
-                            if content and content.text.strip():
-                                text = content.text.strip()
-                                print(f"Found content with selector {selector}: {text[:50]}...")
-                                # 检查文本中是否包含数字和Cursor关键词
-                                if "Cursor" in text and any(c.isdigit() for c in text):
-                                    return {"text": text}
-                        except:
-                            pass
                     
                     # 最后尝试获取整个页面内容
                     print("Trying to get full page content")
                     try:
-                        full_text = self.tab.get_text()
+                        full_text = self.tab.ele("css=html").text
                         print(f"Full page text length: {len(full_text)}")
-                        if full_text and "Cursor" in full_text and any(c.isdigit() for c in full_text):
-                            print(f"Found verification code in full text: {full_text[:100]}...")
+                        if "Sign up for Cursor" in full_text and any(c.isdigit() for c in full_text):
+                            print("Found verification email content in full page!")
                             return {"text": full_text}
                     except Exception as e:
                         print(f"Error getting full text: {e}")
-                        
-                    # 尝试截图以便调试
-                    try:
-                        screenshot_path = "/tmp/email_debug.png"
-                        self.tab.get_screenshot(screenshot_path)
-                        print(f"Saved debug screenshot to {screenshot_path}")
-                    except:
-                        pass
-                        
+                    
                     print("Failed to find any content with verification code")
             except Exception as e:
                 print(e)
