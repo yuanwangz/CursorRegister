@@ -4,135 +4,161 @@ import email
 import re
 from email.policy import default
 from datetime import datetime
+import sys
 
 from ._email_server import EmailServer
 
+# Safe print function to handle encoding errors
+def safe_print(*args, **kwargs):
+    """
+    A print function that handles encoding errors safely.
+    """
+    try:
+        print(*args, **kwargs)
+    except UnicodeEncodeError:
+        # Try to encode to ASCII with replace for error characters
+        new_args = []
+        for arg in args:
+            if isinstance(arg, str):
+                try:
+                    # Replace non-ASCII characters with their ASCII approximation or '?'
+                    new_args.append(arg.encode('ascii', 'replace').decode('ascii'))
+                except:
+                    new_args.append("<non-ASCII text>")
+            else:
+                new_args.append(str(arg))
+        
+        try:
+            print(*new_args, **kwargs)
+        except:
+            print("<Error printing message>")
+
 class GmailImap(EmailServer):
-    """使用IMAP协议访问Gmail邮箱获取验证码"""
+    """Gmail IMAP client for verification code retrieval"""
 
     def __init__(self, username, password):
         """
-        初始化Gmail IMAP连接
+        Initialize Gmail IMAP connection
         
-        参数:
-            username: Gmail邮箱地址
-            password: Gmail应用专用密码(App Password)
+        Parameters:
+            username: Gmail email address
+            password: Gmail app password
         """
         self.username = username
         self.password = password
         self.imap_server = "imap.gmail.com"
         self.email_address = username
         
-        # 连接到Gmail IMAP服务器
+        # Connect to Gmail IMAP server
         self.mail = imaplib.IMAP4_SSL(self.imap_server)
         self.mail.login(username, password)
         self.mail.select('inbox')
         
-        # 记录启动时间作为基准，只获取此时间之后的邮件
+        # Record initialization timestamp as baseline, only get emails after this time
         self.init_timestamp = time.time()
-        print(f"[GmailImap] 初始化时间戳: {self.init_timestamp}")
+        safe_print(f"[GmailImap] Initialization timestamp: {self.init_timestamp}")
         
-        # 记录最新邮件ID以便只检索新邮件
+        # Record latest email ID to only retrieve new emails
         self.latest_id = self._get_latest_email_id()
         
-        # 记录已处理的邮件ID，避免重复处理
+        # Record processed email IDs to avoid duplicates
         self.processed_ids = set()
         if self.latest_id:
             self.processed_ids.add(self.latest_id)
         
-        print(f"[GmailImap] 成功初始化，邮箱: {username}, 最新邮件ID: {self.latest_id}")
+        safe_print(f"[GmailImap] Successfully initialized, email: {username}, latest email ID: {self.latest_id}")
 
     def _get_latest_email_id(self):
-        """获取最新邮件ID"""
+        """Get latest email ID"""
         try:
             _, data = self.mail.uid("SEARCH", None, 'ALL')
             email_ids = data[0].split()
             if email_ids:
                 latest_id = email_ids[-1]
-                print(f"[GmailImap] 获取到最新邮件ID: {latest_id}")
+                safe_print(f"[GmailImap] Retrieved latest email ID: {latest_id}")
                 return latest_id
             return None
         except Exception as e:
-            print(f"[GmailImap] 获取最新邮件ID出错: {e}")
+            safe_print(f"[GmailImap] Error getting latest email ID: {e}")
             return None
         
     def get_email_address(self):
-        """返回Gmail邮箱地址"""
+        """Return Gmail email address"""
         return self.email_address
     
     def fetch_new_emails(self):
-        """获取新邮件，只获取初始化后收到的邮件"""
-        # 确保每次调用都重新选择收件箱
+        """Get new emails, only retrieve emails received after initialization"""
+        # Ensure inbox is selected for each call
         self.mail.select('inbox')
         
         try:
-            # 搜索所有邮件
+            # Search all emails
             _, data = self.mail.uid("SEARCH", None, 'ALL')
             email_ids = data[0].split()
             
             if not email_ids:
-                print("[GmailImap] 没有找到任何邮件")
+                safe_print("[GmailImap] No emails found")
                 return None
                 
-            # 获取最新的邮件ID
+            # Get latest email ID
             newest_id = email_ids[-1]
             
-            # 如果最新ID相同且已处理过，说明没有新邮件
+            # If latest ID is the same and already processed, no new emails
             if newest_id in self.processed_ids:
-                print(f"[GmailImap] 没有新邮件，最新ID: {newest_id}")
+                safe_print(f"[GmailImap] No new emails, latest ID: {newest_id}")
                 return None
             
-            # 获取最新邮件
+            # Get latest email
             _, data = self.mail.uid('FETCH', newest_id, '(RFC822)')
             raw_email = data[0][1]
             msg = email.message_from_bytes(raw_email, policy=default)
             
-            # 获取邮件接收时间
+            # Get email receive time
             received_time = None
             if 'Date' in msg:
                 date_str = msg['Date']
                 try:
-                    # 尝试解析邮件日期
+                    # Try to parse email date
                     date_tuple = email.utils.parsedate_tz(date_str)
                     if date_tuple:
                         received_time = email.utils.mktime_tz(date_tuple)
                 except:
                     pass
             
-            # 如果能获取到接收时间，验证是否是在初始化后收到的邮件
+            # If receive time is available, verify it's after initialization
             if received_time and received_time < self.init_timestamp:
-                print(f"[GmailImap] 跳过初始化前的邮件，邮件时间: {received_time}, 初始化时间: {self.init_timestamp}")
-                # 标记为已处理
+                safe_print(f"[GmailImap] Skipping email from before initialization, email time: {received_time}, init time: {self.init_timestamp}")
+                # Mark as processed
                 self.processed_ids.add(newest_id)
                 return None
                 
-            # 提取邮件信息
+            # Extract email information
             from_header = msg.get('From', '')
             subject = msg.get('Subject', '')
             
-            # 只处理来自Cursor的邮件
+            # Only process emails from Cursor
             if "cursor" not in from_header.lower() and "cursor" not in subject.lower():
-                print(f"[GmailImap] 跳过非Cursor邮件，发件人: {from_header}, 主题: {subject}")
-                # 标记为已处理
+                safe_print(f"[GmailImap] Skipping non-Cursor email, from: {from_header}, subject: {subject}")
+                # Mark as processed
                 self.processed_ids.add(newest_id)
                 return None
             
-            # 提取正文内容
+            # Extract content
             content = ""
             if msg.is_multipart():
-                # 处理多部分邮件
+                # Handle multipart emails
                 for part in msg.get_payload():
                     if part.get_content_type() == 'text/plain':
                         content += part.get_payload(decode=True).decode('utf-8', errors='ignore')
             else:
-                # 处理单部分邮件
+                # Handle single part emails
                 content = msg.get_payload(decode=True).decode('utf-8', errors='ignore')
             
-            # 更新最新ID并标记为已处理
+            # Update latest ID and mark as processed
             self.latest_id = newest_id
             self.processed_ids.add(newest_id)
             
-            print(f"[GmailImap] 成功获取新邮件，ID: {newest_id}, 主题: {subject}")
+            safe_print(f"[GmailImap] Successfully retrieved new email, ID: {newest_id}, subject: {subject}")
             
             return {
                 "from": from_header,
@@ -141,23 +167,23 @@ class GmailImap(EmailServer):
                 "date": msg.get('Date', '')
             }
         except Exception as e:
-            print(f"[GmailImap] 获取新邮件时出错: {e}")
+            safe_print(f"[GmailImap] Error retrieving new email: {e}")
             return None
     
     def extract_verification_code(self, text):
         """
-        从邮件内容中提取6位数字验证码
+        Extract 6-digit verification code from email content
         """
         if not text:
             return None
             
-        # 尝试多种模式匹配验证码
-        # 1. 直接匹配6位数字
+        # Try multiple patterns to match verification code
+        # 1. Direct match of 6 digits
         pattern1 = re.compile(r'\b(\d{6})\b')
-        # 2. 匹配常见的验证码模式
+        # 2. Match common verification code patterns
         pattern2 = re.compile(r'code[:\s]*(\d{6})', re.IGNORECASE)
         pattern3 = re.compile(r'verification[:\s]*(\d{6})', re.IGNORECASE)
-        # 3. 匹配邮件中格式化的验证码 (如 "9 9 2 2 8 2")
+        # 3. Match formatted verification code (e.g., "9 9 2 2 8 2")
         pattern4 = re.compile(r'(\d\s+\d\s+\d\s+\d\s+\d\s+\d)')
         
         for pattern in [pattern1, pattern2, pattern3]:
@@ -165,10 +191,10 @@ class GmailImap(EmailServer):
             if match:
                 return match.group(1)
                 
-        # 处理格式化的验证码
+        # Handle formatted verification code
         match = pattern4.search(text)
         if match:
-            # 移除所有空格
+            # Remove all spaces
             formatted_code = re.sub(r'\s+', '', match.group(1))
             if formatted_code.isdigit() and len(formatted_code) == 6:
                 return formatted_code
@@ -177,33 +203,33 @@ class GmailImap(EmailServer):
     
     def wait_for_new_message(self, delay=5, timeout=300):
         """
-        等待并返回新邮件中的验证码
+        Wait for and return new email with verification code
         
-        参数:
-            delay: 每次检查之间的延迟(秒)
-            timeout: 超时时间(秒)
+        Parameters:
+            delay: Delay between checks (seconds)
+            timeout: Timeout period (seconds)
         """
-        print(f"[GmailImap] 开始等待新邮件，超时时间: {timeout}秒")
+        safe_print(f"[GmailImap] Starting to wait for new emails, timeout: {timeout} seconds")
         start_time = time.time()
         
         while time.time() - start_time <= timeout:
             try:
                 email_data = self.fetch_new_emails()
                 if email_data and "text" in email_data:
-                    print(f"[GmailImap] 成功获取到新邮件: {email_data.get('subject', '无主题')}")
+                    safe_print(f"[GmailImap] Successfully received new email: {email_data.get('subject', 'No subject')}")
                     return email_data
             except Exception as e:
-                print(f"[GmailImap] 等待新邮件时出错: {e}")
+                safe_print(f"[GmailImap] Error while waiting for new email: {e}")
                 
-            # 打印剩余等待时间
+            # Print remaining wait time
             remaining = timeout - (time.time() - start_time)
             if remaining > 0:
-                print(f"[GmailImap] 继续等待新邮件，剩余时间: {int(remaining)}秒")
+                safe_print(f"[GmailImap] Continuing to wait for new emails, remaining time: {int(remaining)} seconds")
             time.sleep(delay)
         
-        print(f"[GmailImap] 等待超时，未收到新邮件")
+        safe_print(f"[GmailImap] Timeout waiting for new emails")
         return None
         
     def wait_for_message(self, delay=5, timeout=300):
-        """兼容EmailServer接口"""
+        """Compatible with EmailServer interface"""
         return self.wait_for_new_message(delay, timeout) 

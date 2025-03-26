@@ -11,6 +11,31 @@ from datetime import datetime
 import time
 import sys
 
+# Safe print function to handle encoding errors
+def safe_print(*args, **kwargs):
+    """
+    A print function that handles encoding errors safely.
+    """
+    try:
+        print(*args, **kwargs)
+    except UnicodeEncodeError:
+        # Try to encode to ASCII with replace for error characters
+        new_args = []
+        for arg in args:
+            if isinstance(arg, str):
+                try:
+                    # Replace non-ASCII characters with their ASCII approximation or '?'
+                    new_args.append(arg.encode('ascii', 'replace').decode('ascii'))
+                except:
+                    new_args.append("<non-ASCII text>")
+            else:
+                new_args.append(str(arg))
+        
+        try:
+            print(*new_args, **kwargs)
+        except:
+            print("<Error printing message>")
+
 # 设置控制台编码为UTF-8，增强跨平台兼容性
 if sys.platform == 'win32':
     try:
@@ -66,10 +91,10 @@ class CursorRegister:
             # mail = TempMailOnline(self.browser)
             self.email_server = mail
             email = mail.get_email_address()
-            print(f"[Register][{self.thread_id}] Using temporary email: {email}")
+            safe_print(f"[Register][{self.thread_id}] Using temporary email: {email}")
         else:
             # 使用已存在的邮箱服务(如Gmail)
-            print(f"[Register][{self.thread_id}] Using configured email: {email}")
+            safe_print(f"[Register][{self.thread_id}] Using configured email: {email}")
 
         # 创建新的队列，确保不会使用之前的验证码
         email_queue = queue.Queue()
@@ -82,42 +107,42 @@ class CursorRegister:
         # Input email
         for retry in range(self.retry_times):
             try:
-                if enable_register_log: print(f"[Register][{self.thread_id}][{retry}] Input email")
+                if enable_register_log: safe_print(f"[Register][{self.thread_id}][{retry}] Input email")
                 tab.ele("xpath=//input[@name='email']").input(email, clear=True)
                 tab.ele("@type=submit").click()
 
                 # If not in password page, try pass turnstile page
                 if not tab.wait.url_change(CURSOR_PASSWORD_URL, timeout=3) and CURSOR_SIGNIN_URL in tab.url:
-                    if enable_register_log: print(f"[Register][{self.thread_id}][{retry}] Try pass Turnstile for email page")
+                    if enable_register_log: safe_print(f"[Register][{self.thread_id}][{retry}] Try pass Turnstile for email page")
                     self._cursor_turnstile(tab)
 
             except Exception as e:
-                print(f"[Register][{self.thread_id}] Exception when handlding email page.")
-                print(e)
+                safe_print(f"[Register][{self.thread_id}] Exception when handlding email page.")
+                safe_print(e)
 
             # In password page or data is validated, continue to next page
             if tab.wait.url_change(CURSOR_PASSWORD_URL, timeout=5):
-                print(f"[Register][{self.thread_id}] Continue to password page")
+                safe_print(f"[Register][{self.thread_id}] Continue to password page")
                 break
 
             tab.refresh()
             # Kill the function since time out 
             if retry == self.retry_times - 1:
-                print(f"[Register][{self.thread_id}] Timeout when inputing email address")
+                safe_print(f"[Register][{self.thread_id}] Timeout when inputing email address")
                 return None
 
         # Use email sign-in code in password page
         for retry in range(self.retry_times):
             try:
-                if enable_register_log: print(f"[Register][{self.thread_id}][{retry}] Input password")
+                if enable_register_log: safe_print(f"[Register][{self.thread_id}][{retry}] Input password")
                 if password is None:
                     # 确认魔法码按钮存在
                     magic_code_button = tab.ele("xpath=//button[@value='magic-code']")
                     if magic_code_button:
                         magic_code_button.click()
-                        print(f"[Register][{self.thread_id}] Clicked magic code button, waiting for verification code")
+                        safe_print(f"[Register][{self.thread_id}] Clicked magic code button, waiting for verification code")
                     else:
-                        print(f"[Register][{self.thread_id}] Warning: Magic code button not found")
+                        safe_print(f"[Register][{self.thread_id}] Warning: Magic code button not found")
                         return None
                 else:
                     # 如果提供了密码，则使用密码登录
@@ -125,33 +150,33 @@ class CursorRegister:
                     if password_input:
                         password_input.input(password, clear=True)
                         tab.ele('@type=submit').click()
-                        print(f"[Register][{self.thread_id}] Using password to login")
+                        safe_print(f"[Register][{self.thread_id}] Using password to login")
                     else:
-                        print(f"[Register][{self.thread_id}] Warning: Password input field not found")
+                        safe_print(f"[Register][{self.thread_id}] Warning: Password input field not found")
                         return None
 
                 # If not in verification code page, try pass turnstile page
                 if not tab.wait.url_change(CURSOR_MAGAIC_CODE_URL, timeout=3) and CURSOR_PASSWORD_URL in tab.url:
-                    if enable_register_log: print(f"[Register][{self.thread_id}][{retry}] Try pass Turnstile for password page")
+                    if enable_register_log: safe_print(f"[Register][{self.thread_id}][{retry}] Try pass Turnstile for password page")
                     self._cursor_turnstile(tab)
 
             except Exception as e:
-                print(f"[Register][{self.thread_id}] Exception when handling password page.")
-                print(e)
+                safe_print(f"[Register][{self.thread_id}] Exception when handling password page.")
+                safe_print(e)
 
             # In code verification page or data is validated, continue to next page
             if tab.wait.url_change(CURSOR_MAGAIC_CODE_URL, timeout=5):
-                print(f"[Register][{self.thread_id}] Continue to email code page")
+                safe_print(f"[Register][{self.thread_id}] Continue to email code page")
                 break
 
             if tab.wait.eles_loaded("xpath=//div[contains(text(), 'Sign up is restricted.')]", timeout=3):
-                print(f"[Register][{self.thread_id}][Error] Sign up is restricted.")
+                safe_print(f"[Register][{self.thread_id}][Error] Sign up is restricted.")
                 return None
 
             tab.refresh()
             # Kill the function since time out 
             if retry == self.retry_times - 1:
-                if enable_register_log: print(f"[Register][{self.thread_id}] Timeout when inputing password")
+                if enable_register_log: safe_print(f"[Register][{self.thread_id}] Timeout when inputing password")
                 return None
 
         # Get email verification code
@@ -159,28 +184,28 @@ class CursorRegister:
             verify_code = None
             message = None
 
-            print(f"[Register][{self.thread_id}] Waiting for verification email...")
+            safe_print(f"[Register][{self.thread_id}] Waiting for verification email...")
             data = email_queue.get(timeout=60)
             if data is None:
-                print(f"[Register][{self.thread_id}] Email not received or error occurred")
+                safe_print(f"[Register][{self.thread_id}] Email not received or error occurred")
                 return None
                 
-            print(f"[Register][{self.thread_id}] Email received, extracting verification code")
+            safe_print(f"[Register][{self.thread_id}] Email received, extracting verification code")
             
             # 尝试从text字段获取验证码
             if "text" in data:
                 message = data["text"]
-                print(f"[Register][{self.thread_id}] Email content: {message[:100]}...")
+                safe_print(f"[Register][{self.thread_id}] Email content: {message[:100]}...")
             # 如果没有text字段，尝试从content字段获取
             elif "content" in data:
                 message = data["content"]
-                print(f"[Register][{self.thread_id}] Content from content field: {message[:100]}...")
+                safe_print(f"[Register][{self.thread_id}] Content from content field: {message[:100]}...")
             # 尝试从body_text字段获取
             elif "body_text" in data:
                 message = data["body_text"]
-                print(f"[Register][{self.thread_id}] Content from body_text field: {message[:100]}...")
+                safe_print(f"[Register][{self.thread_id}] Content from body_text field: {message[:100]}...")
             else:
-                print(f"[Register][{self.thread_id}] Unable to get content from email, available fields: {list(data.keys())}")
+                safe_print(f"[Register][{self.thread_id}] Unable to get content from email, available fields: {list(data.keys())}")
                 return None
                 
             # 提取验证码
@@ -188,7 +213,7 @@ class CursorRegister:
                 # 首先检查是否直接是6位数字
                 if message.strip().isdigit() and len(message.strip()) == 6:
                     verify_code = message.strip()
-                    print(f"[Register][{self.thread_id}] Directly got verification code: {verify_code}")
+                    safe_print(f"[Register][{self.thread_id}] Directly got verification code: {verify_code}")
                 else:
                     # 清理内容以便正则匹配
                     clean_message = message.replace(" ", "")
@@ -205,7 +230,7 @@ class CursorRegister:
                         match = re.search(pattern, clean_message)
                         if match:
                             verify_code = match.group(1)
-                            print(f"[Register][{self.thread_id}] Extracted code via pattern '{pattern}': {verify_code}")
+                            safe_print(f"[Register][{self.thread_id}] Extracted code via pattern '{pattern}': {verify_code}")
                             break
                     
                     # 如果上面的模式都没匹配到，尝试特殊格式如 "9 9 2 2 8 2"
@@ -216,28 +241,28 @@ class CursorRegister:
                             formatted_code = re.sub(r'\s+', '', match.group(1))
                             if formatted_code.isdigit() and len(formatted_code) == 6:
                                 verify_code = formatted_code
-                                print(f"[Register][{self.thread_id}] Extracted code via special format: {verify_code}")
+                                safe_print(f"[Register][{self.thread_id}] Extracted code via special format: {verify_code}")
             
             # 如果email_server有extract_verification_code方法，尝试使用它
             if verify_code is None and hasattr(self.email_server, 'extract_verification_code'):
                 verify_code = self.email_server.extract_verification_code(message)
                 if verify_code:
-                    print(f"[Register][{self.thread_id}] Using email_server to extract code: {verify_code}")
+                    safe_print(f"[Register][{self.thread_id}] Using email_server to extract code: {verify_code}")
             
             if verify_code is None:
-                print(f"[Register][{self.thread_id}] Unable to extract verification code from email")
+                safe_print(f"[Register][{self.thread_id}] Unable to extract verification code from email")
                 return None
                 
-            print(f"[Register][{self.thread_id}] Final verification code: {verify_code}")
+            safe_print(f"[Register][{self.thread_id}] Final verification code: {verify_code}")
             
         except Exception as e:
-            print(f"[Register][{self.thread_id}] Error extracting verification code: {e}")
+            safe_print(f"[Register][{self.thread_id}] Error extracting verification code: {e}")
             return None
 
         # Input email verification code
         for retry in range(self.retry_times):
             try:
-                if enable_register_log: print(f"[Register][{self.thread_id}][{retry}] Input email verification code")
+                if enable_register_log: safe_print(f"[Register][{self.thread_id}][{retry}] Input email verification code")
 
                 for idx, digit in enumerate(verify_code, start = 0):
                     tab.ele(f"xpath=//input[@data-index={idx}]").input(digit, clear=True)
@@ -245,12 +270,12 @@ class CursorRegister:
                 tab.wait(0.5, 1.5)
 
                 if not tab.wait.url_change(CURSOR_URL, timeout=3) and CURSOR_MAGAIC_CODE_URL in tab.url:
-                    if enable_register_log: print(f"[Register][{self.thread_id}][{retry}] Try pass Turnstile for email code page.")
+                    if enable_register_log: safe_print(f"[Register][{self.thread_id}][{retry}] Try pass Turnstile for email code page.")
                     self._cursor_turnstile(tab)
 
             except Exception as e:
-                print(f"[Register][{self.thread_id}] Exception when handling email code page.")
-                print(e)
+                safe_print(f"[Register][{self.thread_id}] Exception when handling email code page.")
+                safe_print(e)
 
             if tab.wait.url_change(CURSOR_URL, timeout=5):
                 break
@@ -258,26 +283,26 @@ class CursorRegister:
             tab.refresh()
             # Kill the function since time out 
             if retry == self.retry_times - 1:
-                if enable_register_log: print(f"[Register][{self.thread_id}] Timeout when inputing email verification code")
+                if enable_register_log: safe_print(f"[Register][{self.thread_id}] Timeout when inputing email verification code")
                 return None
 
         # Get cookie
         try:
             cookies = tab.cookies().as_dict()
         except e:
-            print(f"[Register][{self.thread_id}] Fail to get cookie.")
+            safe_print(f"[Register][{self.thread_id}] Fail to get cookie.")
             return None
 
         token = cookies.get('WorkosCursorSessionToken', None)
         if enable_register_log:
             if token is not None:
-                print(f"[Register][{self.thread_id}] Register Account Successfully.")
+                safe_print(f"[Register][{self.thread_id}] Register Account Successfully.")
             else:
-                print(f"[Register][{self.thread_id}] Register Account Failed.")
+                safe_print(f"[Register][{self.thread_id}] Register Account Failed.")
 
         if not hide_account_info:
-            print(f"[Register] Cursor Email: {email}")
-            print(f"[Register] Cursor Token: {token}")
+            safe_print(f"[Register] Cursor Email: {email}")
+            safe_print(f"[Register] Cursor Token: {token}")
 
         return tab
 
@@ -308,60 +333,60 @@ class CursorRegister:
         # Input email
         for retry in range(retry_times):
             try:
-                if enable_register_log: print(f"[Register][{thread_id}][{retry}] Input email")
+                if enable_register_log: safe_print(f"[Register][{thread_id}][{retry}] Input email")
                 tab.ele("xpath=//input[@name='email']").input(email, clear=True)
                 tab.ele("@type=submit").click()
 
                 # If not in password page, try pass turnstile page
                 if not tab.wait.url_change(CURSOR_SIGNUP_PASSWORD_URL, timeout=3) and CURSOR_SIGNUP_URL in tab.url:
-                    if enable_register_log: print(f"[Register][{thread_id}][{retry}] Try pass Turnstile for email page")
+                    if enable_register_log: safe_print(f"[Register][{thread_id}][{retry}] Try pass Turnstile for email page")
                     self._cursor_turnstile(tab)
 
             except Exception as e:
-                print(f"[Register][{thread_id}] Exception when handlding email page.")
-                print(e)
+                safe_print(f"[Register][{thread_id}] Exception when handlding email page.")
+                safe_print(e)
 
             # In password page or data is validated, continue to next page
             if tab.wait.url_change(CURSOR_SIGNUP_PASSWORD_URL, timeout=5):
-                print(f"[Register][{thread_id}] Continue to password page")
+                safe_print(f"[Register][{thread_id}] Continue to password page")
                 break
 
             tab.refresh()
             # Kill the function since time out 
             if retry == retry_times - 1:
-                print(f"[Register][{thread_id}] Timeout when inputing email address")
+                safe_print(f"[Register][{thread_id}] Timeout when inputing email address")
                 if not enable_browser_log: browser.quit(force=True, del_data=True)
                 return None
 
         # Use email sign-in code in password page
         for retry in range(retry_times):
             try:
-                if enable_register_log: print(f"[Register][{thread_id}][{retry}] Input password")
+                if enable_register_log: safe_print(f"[Register][{thread_id}][{retry}] Input password")
                 tab.ele("xpath=//input[@name='password']").input(password, clear=True)
                 tab.ele('@type=submit').click()
 
                 # If not in verification code page, try pass turnstile page
                 if not tab.wait.url_change(CURSOR_EMAIL_VERIFICATION_URL, timeout=3) and CURSOR_SIGNUP_PASSWORD_URL in tab.url:
-                    if enable_register_log: print(f"[Register][{thread_id}][{retry}] Try pass Turnstile for password page")
+                    if enable_register_log: safe_print(f"[Register][{thread_id}][{retry}] Try pass Turnstile for password page")
                     self._cursor_turnstile(tab)
 
             except Exception as e:
-                print(f"[Register][{thread_id}] Exception when handling password page.")
-                print(e)
+                safe_print(f"[Register][{thread_id}] Exception when handling password page.")
+                safe_print(e)
 
             # In code verification page or data is validated, continue to next page
             if tab.wait.url_change(CURSOR_EMAIL_VERIFICATION_URL, timeout=5):
-                print(f"[Register][{thread_id}] Continue to email code page")
+                safe_print(f"[Register][{thread_id}] Continue to email code page")
                 break
 
             if tab.wait.eles_loaded("xpath=//div[contains(text(), 'Sign up is restricted.')]", timeout=3):
-                print(f"[Register][{thread_id}][Error] Sign up is restricted.")
+                safe_print(f"[Register][{thread_id}][Error] Sign up is restricted.")
                 return None
 
             tab.refresh()
             # Kill the function since time out 
             if retry == retry_times - 1:
-                if enable_register_log: print(f"[Register][{thread_id}] Timeout when inputing password")
+                if enable_register_log: safe_print(f"[Register][{thread_id}] Timeout when inputing password")
                 return None
 
         # Get email verification code
@@ -388,13 +413,13 @@ class CursorRegister:
             assert verify_code is not None, "Fail to get code from email."
 
         except Exception as e:
-            print(f"[Register][{thread_id}] Fail to get code from email.")
+            safe_print(f"[Register][{thread_id}] Fail to get code from email.")
             return None
 
         # Input email verification code
         for retry in range(retry_times):
             try:
-                if enable_register_log: print(f"[Register][{thread_id}][{retry}] Input email verification code")
+                if enable_register_log: safe_print(f"[Register][{thread_id}][{retry}] Input email verification code")
 
                 for idx, digit in enumerate(verify_code, start = 0):
                     tab.ele(f"xpath=//input[@data-index={idx}]").input(digit, clear=True)
@@ -402,12 +427,12 @@ class CursorRegister:
                 tab.wait(0.5, 1.5)
 
                 if not tab.wait.url_change(CURSOR_URL, timeout=3) and CURSOR_MAGAIC_CODE_URL in tab.url:
-                    if enable_register_log: print(f"[Register][{thread_id}][{retry}] Try pass Turnstile for email code page.")
+                    if enable_register_log: safe_print(f"[Register][{thread_id}][{retry}] Try pass Turnstile for email code page.")
                     self._cursor_turnstile(tab)
 
             except Exception as e:
-                print(f"[Register][{thread_id}] Exception when handling email code page.")
-                print(e)
+                safe_print(f"[Register][{thread_id}] Exception when handling email code page.")
+                safe_print(e)
 
             if tab.wait.url_change(CURSOR_URL, timeout=3):
                 break
@@ -415,27 +440,27 @@ class CursorRegister:
             tab.refresh()
             # Kill the function since time out 
             if retry == retry_times - 1:
-                if enable_register_log: print(f"[Register][{thread_id}] Timeout when inputing email verification code")
+                if enable_register_log: safe_print(f"[Register][{thread_id}] Timeout when inputing email verification code")
                 return None
 
         # Get cookie
         try:
             cookies = tab.cookies().as_dict()
         except e:
-            print(f"[Register][{thread_id}] Fail to get cookie.")
+            safe_print(f"[Register][{thread_id}] Fail to get cookie.")
             if not enable_browser_log: browser.quit(force=True, del_data=True)
             return None
 
         token = cookies.get('WorkosCursorSessionToken', None)
         if enable_register_log:
             if token is not None:
-                print(f"[Register][{thread_id}] Register Account Successfully.")
+                safe_print(f"[Register][{thread_id}] Register Account Successfully.")
             else:
-                print(f"[Register][{thread_id}] Register Account Failed.")
+                safe_print(f"[Register][{thread_id}] Register Account Failed.")
 
         if not hide_account_info:
-            print(f"[Register] Cursor Email: {email}")
-            print(f"[Register] Cursor Token: {token}")
+            safe_print(f"[Register] Cursor Email: {email}")
+            safe_print(f"[Register] Cursor Token: {token}")
 
         return {
             'username': email,
@@ -449,36 +474,36 @@ class CursorRegister:
             # 导航到设置页面
             tab.get(CURSOR_SETTINGS_URL)
             tab.wait(5)  # Wait for page to load
-            print(f"[Account Delete][{self.thread_id}] Entered settings page")
+            safe_print(f"[Account Delete][{self.thread_id}] Entered settings page")
             
             # 1. 点击Advanced按钮展开高级选项
             advanced_button = tab.ele("xpath=//div[contains(@class, 'cursor-pointer') and contains(., 'Advanced')]")
             if advanced_button:
                 advanced_button.click()
-                print(f"[Account Delete][{self.thread_id}] Clicked Advanced button")
+                safe_print(f"[Account Delete][{self.thread_id}] Clicked Advanced button")
                 tab.wait(2)
             else:
-                print(f"[Account Delete][{self.thread_id}] Advanced button not found")
+                safe_print(f"[Account Delete][{self.thread_id}] Advanced button not found")
                 return False
                 
             # 2. 点击Delete Account按钮
             delete_button = tab.ele("xpath=//button[contains(@class, 'underline') and contains(., 'Delete Account')]")
             if delete_button:
                 delete_button.click()
-                print(f"[Account Delete][{self.thread_id}] Clicked Delete Account button")
+                safe_print(f"[Account Delete][{self.thread_id}] Clicked Delete Account button")
                 tab.wait(2)
             else:
-                print(f"[Account Delete][{self.thread_id}] Delete Account button not found")
+                safe_print(f"[Account Delete][{self.thread_id}] Delete Account button not found")
                 return False
                 
             # 3. 输入确认文本"Delete"
             confirm_input = tab.ele("xpath=//input[@placeholder=\"Type 'Delete' to confirm\"]")
             if confirm_input:
                 confirm_input.input("Delete", clear=True)
-                print(f"[Account Delete][{self.thread_id}] Entered confirmation text 'Delete'")
+                safe_print(f"[Account Delete][{self.thread_id}] Entered confirmation text 'Delete'")
                 tab.wait(1)
             else:
-                print(f"[Account Delete][{self.thread_id}] Confirmation input field not found")
+                safe_print(f"[Account Delete][{self.thread_id}] Confirmation input field not found")
                 return False
                 
             # 4. 点击最终的Delete按钮
@@ -488,53 +513,53 @@ class CursorRegister:
                 is_disabled = final_delete_button.attr('aria-disabled') == 'true'
                 if is_disabled:
                     # 尝试等待按钮启用
-                    print(f"[Account Delete][{self.thread_id}] Waiting for Delete button to be enabled")
+                    safe_print(f"[Account Delete][{self.thread_id}] Waiting for Delete button to be enabled")
                     tab.wait(2)
                     # 再次检查
                     is_disabled = final_delete_button.attr('aria-disabled') == 'true'
                     if is_disabled:
-                        print(f"[Account Delete][{self.thread_id}] Delete button is disabled, more confirmation may be needed")
+                        safe_print(f"[Account Delete][{self.thread_id}] Delete button is disabled, more confirmation may be needed")
                         return False
                 
                 final_delete_button.click()
-                print(f"[Account Delete][{self.thread_id}] Clicked final Delete button")
+                safe_print(f"[Account Delete][{self.thread_id}] Clicked final Delete button")
                 tab.wait(5)  # 等待处理完成
                 
                 # 验证是否返回到登录页面或首页
                 if CURSOR_SIGNIN_URL in tab.url or "sign-in" in tab.url or "cursor.com" in tab.url:
-                    print(f"[Account Delete][{self.thread_id}] Account deleted successfully, current URL: {tab.url}")
+                    safe_print(f"[Account Delete][{self.thread_id}] Account deleted successfully, current URL: {tab.url}")
                     return True
                 else:
-                    print(f"[Account Delete][{self.thread_id}] Account may not have been deleted, current URL: {tab.url}")
+                    safe_print(f"[Account Delete][{self.thread_id}] Account may not have been deleted, current URL: {tab.url}")
                     return False
             else:
-                print(f"[Account Delete][{self.thread_id}] Final Delete button not found")
+                safe_print(f"[Account Delete][{self.thread_id}] Final Delete button not found")
                 return False
                 
         except Exception as e:
-            print(f"[Account Delete][{self.thread_id}] Exception during account deletion: {e}")
+            safe_print(f"[Account Delete][{self.thread_id}] Exception during account deletion: {e}")
             return False
 
     def get_cursor_cookie(self, tab):
         try:
             cookies = tab.cookies().as_dict()
         except:
-            print(f"[Register][{self.thread_id}] Fail to get cookie.")
+            safe_print(f"[Register][{self.thread_id}] Fail to get cookie.")
             return None
 
         token = cookies.get('WorkosCursorSessionToken', None)
         if enable_register_log:
             if token is not None:
-                print(f"[Register][{self.thread_id}] Register Account Successfully.")
+                safe_print(f"[Register][{self.thread_id}] Register Account Successfully.")
             else:
-                print(f"[Register][{self.thread_id}] Register Account Failed.")
+                safe_print(f"[Register][{self.thread_id}] Register Account Failed.")
 
         return token
 
     def _cursor_turnstile(self, tab, retry_times = 5):
         for retry in range(retry_times): # Retry times
             try:
-                if enable_register_log: print(f"[Register][{self.thread_id}][{retry}] Passing Turnstile")
+                if enable_register_log: safe_print(f"[Register][{self.thread_id}][{retry}] Passing Turnstile")
                 challenge_shadow_root = tab.ele('@id=cf-turnstile').child().shadow_root
                 challenge_shadow_button = challenge_shadow_root.ele("tag:iframe", timeout=30).ele("tag:body").sr("xpath=//input[@type='checkbox']")
                 if challenge_shadow_button:
@@ -543,7 +568,7 @@ class CursorRegister:
             except:
                 pass
             if retry == retry_times - 1:
-                print("[Register] Timeout when passing turnstile")
+                safe_print("[Register] Timeout when passing turnstile")
 
     def _wait_for_new_message(self, queue, timeout=300):
         try:
@@ -551,7 +576,7 @@ class CursorRegister:
             if data:
                 # 打印邮件主题，帮助调试
                 if "subject" in data:
-                    print(f"Email subject: {data.get('subject', 'Unknown Subject')}")
+                    safe_print(f"Email subject: {data.get('subject', 'Unknown Subject')}")
                 
                 # 确保text字段存在
                 if "text" in data:
@@ -562,7 +587,7 @@ class CursorRegister:
                         # 如果编码失败，保持原样
                         pass
                     
-                    print(f"Email content received: {data['text'][:100]}..." if len(data['text']) > 100 else data['text'])
+                    safe_print(f"Email content received: {data['text'][:100]}..." if len(data['text']) > 100 else data['text'])
                 else:
                     # 如果text字段不存在，尝试从其他字段提取
                     if "content" in data:
@@ -571,11 +596,11 @@ class CursorRegister:
                         data["text"] = data["body_text"]
                     
                     if "text" not in data:
-                        print(f"[Warning] Email missing text content, available fields: {list(data.keys())}")
+                        safe_print(f"[Warning] Email missing text content, available fields: {list(data.keys())}")
             
             queue.put(copy.deepcopy(data))
         except Exception as e:
-            print(f"[Error] Error waiting for email: {e}")
+            safe_print(f"[Error] Error waiting for email: {e}")
             queue.put(None)
 
 def register_pipeline(options):
@@ -584,7 +609,7 @@ def register_pipeline(options):
         # Maybe fail to open the browser
         browser = Chromium(options)
     except Exception as e:
-        print(e)
+        safe_print(e)
         return None
 
     register = CursorRegister(browser)    
@@ -597,8 +622,8 @@ def register_pipeline(options):
     register.browser.quit(force=True, del_data=True)
 
     #if not hide_account_info:
-    #    print(f"[Register] Cursor Email: {"email"}")
-    #    print(f"[Register] Cursor Token: {token}")
+    #    safe_print(f"[Register] Cursor Email: {"email"}")
+    #    safe_print(f"[Register] Cursor Token: {token}")
 
     return {
         "token": token
@@ -613,7 +638,7 @@ def gmail_account_cycle(gmail_email, gmail_app_password, api_url=None):
         gmail_app_password: Gmail app password
         api_url: Optional, API URL to upload token
     """
-    print(f"[Gmail Cycle] Starting to process Gmail account: {gmail_email}")
+    safe_print(f"[Gmail Cycle] Starting to process Gmail account: {gmail_email}")
 
     options = ChromiumOptions()
     options.auto_port()
@@ -638,80 +663,80 @@ def gmail_account_cycle(gmail_email, gmail_app_password, api_url=None):
     try:
         # Open browser
         browser = Chromium(options)
-        print(f"[Gmail Cycle] Browser launched")
+        safe_print(f"[Gmail Cycle] Browser launched")
         
         # Pause to ensure time difference for distinguishing old vs new emails
-        print(f"[Gmail Cycle] Pausing for 5 seconds to ensure we can distinguish new emails")
+        safe_print(f"[Gmail Cycle] Pausing for 5 seconds to ensure we can distinguish new emails")
         time.sleep(5)
         
         # Create Gmail IMAP client
         gmail_client = GmailImap(gmail_email, gmail_app_password)
-        print(f"[Gmail Cycle] Gmail IMAP client created")
+        safe_print(f"[Gmail Cycle] Gmail IMAP client created")
         
         # Create register and set email server
         register = CursorRegister(browser)
         register.email_server = gmail_client
         
         # Step 1: Login with Gmail account
-        print(f"[Gmail Cycle] Starting Gmail login")
+        safe_print(f"[Gmail Cycle] Starting Gmail login")
         # Confirm email service is set correctly
-        print(f"[Gmail Cycle] Using email: {gmail_email}")
-        print(f"[Gmail Cycle] Email service type: {type(register.email_server).__name__}")
+        safe_print(f"[Gmail Cycle] Using email: {gmail_email}")
+        safe_print(f"[Gmail Cycle] Email service type: {type(register.email_server).__name__}")
         
         tab = register.sign_in(gmail_email)
         if not tab:
-            print(f"[Gmail Cycle] Login failed")
+            safe_print(f"[Gmail Cycle] Login failed")
             browser.quit(force=True, del_data=True)
             return None
         
         # Get first login token for verification
         first_token = register.get_cursor_cookie(tab)
         if not first_token:
-            print(f"[Gmail Cycle] Failed to get token from first login")
+            safe_print(f"[Gmail Cycle] Failed to get token from first login")
             browser.quit(force=True, del_data=True)
             return None
             
-        print(f"[Gmail Cycle] Login successful, first token: {first_token[:10]}..., preparing to delete account")
+        safe_print(f"[Gmail Cycle] Login successful, first token: {first_token[:10]}..., preparing to delete account")
         
         # Step 2: Delete account
         delete_success = register.delete_account(tab)
         if not delete_success:
-            print(f"[Gmail Cycle] Account deletion failed")
+            safe_print(f"[Gmail Cycle] Account deletion failed")
             browser.quit(force=True, del_data=True)
             return None
         
-        print(f"[Gmail Cycle] Account deleted successfully, preparing to login again")
+        safe_print(f"[Gmail Cycle] Account deleted successfully, preparing to login again")
         
         # Pause to ensure deletion is fully processed
-        print(f"[Gmail Cycle] Pausing 10 seconds to ensure deletion is complete")
+        safe_print(f"[Gmail Cycle] Pausing 10 seconds to ensure deletion is complete")
         time.sleep(10)
         
         # Step 3: Re-login with the same email client
         # Reset email client to ensure we get new emails
-        print(f"[Gmail Cycle] Creating new Gmail IMAP client")
+        safe_print(f"[Gmail Cycle] Creating new Gmail IMAP client")
         gmail_client = GmailImap(gmail_email, gmail_app_password)
         register.email_server = gmail_client
         
         tab = register.sign_in(gmail_email)
         if not tab:
-            print(f"[Gmail Cycle] Re-login failed")
+            safe_print(f"[Gmail Cycle] Re-login failed")
             browser.quit(force=True, del_data=True)
             return None
         
         # Get token
         token = register.get_cursor_cookie(tab)
         if not token:
-            print(f"[Gmail Cycle] Failed to get token")
+            safe_print(f"[Gmail Cycle] Failed to get token")
             browser.quit(force=True, del_data=True)
             return None
             
         # Verify token has changed, confirming new registration
         if token == first_token:
-            print(f"[Gmail Cycle] Warning: Re-login token is identical to first token, account may not have been deleted")
+            safe_print(f"[Gmail Cycle] Warning: Re-login token is identical to first token, account may not have been deleted")
         else:
-            print(f"[Gmail Cycle] Successfully obtained new token: {token[:10]}...")
+            safe_print(f"[Gmail Cycle] Successfully obtained new token: {token[:10]}...")
         
-        print(f"[Gmail Cycle] Successfully obtained token")
+        safe_print(f"[Gmail Cycle] Successfully obtained token")
         # Upload token to API if provided
         if api_url:
             try:
@@ -723,14 +748,14 @@ def gmail_account_cycle(gmail_email, gmail_app_password, api_url=None):
                 try:
                     if response.content and len(response.content.strip()) > 0:
                         response_json = response.json()
-                        print(f'[Custom-API] Upload token. Status code: {response.status_code}, Response: {response_json}')
+                        safe_print(f'[Custom-API] Upload token. Status code: {response.status_code}, Response: {response_json}')
                     else:
-                        print(f'[Custom-API] Upload token. Status code: {response.status_code}, Response is empty')
+                        safe_print(f'[Custom-API] Upload token. Status code: {response.status_code}, Response is empty')
                 except Exception as e:
-                    print(f'[Custom-API] Upload token. Status code: {response.status_code}, Unable to parse response: {str(response.content)[:100]}')
-                    print(f'[Custom-API] Response parsing error: {e}')
+                    safe_print(f'[Custom-API] Upload token. Status code: {response.status_code}, Unable to parse response: {str(response.content)[:100]}')
+                    safe_print(f'[Custom-API] Response parsing error: {e}')
             except Exception as e:
-                print(f'[Custom-API] Error uploading token: {e}')
+                safe_print(f'[Custom-API] Error uploading token: {e}')
                 # Continue execution without interrupting the flow
         
         # Close browser
@@ -752,7 +777,7 @@ def gmail_account_cycle(gmail_email, gmail_app_password, api_url=None):
         return result
         
     except Exception as e:
-        print(f"[Gmail Cycle] Exception during execution: {e}")
+        safe_print(f"[Gmail Cycle] Exception during execution: {e}")
         try:
             browser.quit(force=True, del_data=True)
         except:
@@ -850,20 +875,20 @@ if __name__ == "__main__":
     # 如果启用Gmail账户循环
     if use_gmail_cycle:
         if not gmail_email or not gmail_password:
-            print("[Error] Gmail email address and app password are required")
+            safe_print("[Error] Gmail email address and app password are required")
         else:
-            print(f"[Gmail Cycle] Starting Gmail account cycle flow")
+            safe_print(f"[Gmail Cycle] Starting Gmail account cycle flow")
             result = gmail_account_cycle(gmail_email, gmail_password, api_url if use_custom_api else None)
             if result:
-                print(f"[Gmail Cycle] Flow completed successfully")
+                safe_print(f"[Gmail Cycle] Flow completed successfully")
             else:
-                print(f"[Gmail Cycle] Flow execution failed")
+                safe_print(f"[Gmail Cycle] Flow execution failed")
     # 否则使用常规注册流程
     else:
-        print(f"[Register] Start to register {number} accounts in {max_workers} threads")
+        safe_print(f"[Register] Start to register {number} accounts in {max_workers} threads")
         account_infos = register_cursor(number, max_workers)
         tokens = list(set([row['token'] for row in account_infos]))
-        print(f"[Register] Register {len(tokens)} accounts successfully")
+        safe_print(f"[Register] Register {len(tokens)} accounts successfully")
         
         if use_oneapi and len(account_infos) > 0:
             from tokenManager.oneapi_manager import OneAPIManager
@@ -879,11 +904,11 @@ if __name__ == "__main__":
                                             oneapi_channel_url,
                                             '\n'.join(batch),
                                             Cursor.models)
-                print(f'[OneAPI] Add Channel Request For Batch {idx}. Status Code: {response.status_code}, Response Body: {response.json()}')
+                safe_print(f'[OneAPI] Add Channel Request For Batch {idx}. Status Code: {response.status_code}, Response Body: {response.json()}')
         elif use_custom_api and len(account_infos) > 0:
             from tokenManager.custom_api_manager import CustomAPIManager
             custom_api = CustomAPIManager(api_url)
             for token in tokens:
                 response = custom_api.upload_tokens(token)
-                print(f'[Custom-API] Upload Token. Status Code: {response.status_code}, Response Body: {response.json()}')
-            print(f"[Custom-API] Upload {len(tokens)} tokens successfully")
+                safe_print(f'[Custom-API] Upload Token. Status Code: {response.status_code}, Response Body: {response.json()}')
+            safe_print(f"[Custom-API] Upload {len(tokens)} tokens successfully")
