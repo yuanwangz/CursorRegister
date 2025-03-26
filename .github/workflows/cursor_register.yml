@@ -27,6 +27,10 @@ on:
         description: 'Gmail email address for cycle flow'
         type: string
         required: false
+      gmail_pwd:
+        description: 'Gmail email pwd for cycle flow'
+        type: string
+        required: false
       gmail_target_api:
         description: 'Target API type for Gmail cycle flow'
         type: choice
@@ -56,19 +60,19 @@ jobs:
       - name: Run Gmail cycle with OneAPI
         if: ${{ github.event.inputs.enable_gmail_cycle == 'true' && github.event.inputs.gmail_target_api == 'oneapi' }}
         run: |
-          python3 ./cursor_register_v2.py --gmail-cycle --gmail-email "${{ github.event.inputs.gmail_email }}" --gmail-password "${{ secrets.GMAIL_APP_PASSWORD }}" --oneapi --oneapi_url "${{ secrets.CURSOR_ONEAPI_URL }}" --oneapi_token "${{ secrets.CURSOR_ONEAPI_TOKEN }}" --oneapi_channel_url "${{ secrets.CURSOR_CHANNEL_URL }}"
+          python3 ./cursor_register_v2.py --gmail-cycle --gmail-email "${{ github.event.inputs.gmail_email }}" --gmail-password "${{ github.event.inputs.gmail_pwd }}" --oneapi --oneapi_url "${{ secrets.CURSOR_ONEAPI_URL }}" --oneapi_token "${{ secrets.CURSOR_ONEAPI_TOKEN }}" --oneapi_channel_url "${{ secrets.CURSOR_CHANNEL_URL }}"
           
       # Gmail循环流程 - 使用Custom API
       - name: Run Gmail cycle with Custom API
         if: ${{ github.event.inputs.enable_gmail_cycle == 'true' && github.event.inputs.gmail_target_api == 'custom_api' }}
         run: |
-          python3 ./cursor_register_v2.py --gmail-cycle --gmail-email "${{ github.event.inputs.gmail_email }}" --gmail-password "${{ secrets.GMAIL_APP_PASSWORD }}" --custom-api --api_url "${{ secrets.CUSTOM_API_URL }}"
+          python3 ./cursor_register_v2.py --gmail-cycle --gmail-email "${{ github.event.inputs.gmail_email }}" --gmail-password "${{ github.event.inputs.gmail_pwd }}" --custom-api --api_url "${{ secrets.CUSTOM_API_URL }}"
           
       # Gmail循环流程 - 不使用API
       - name: Run Gmail cycle without API
         if: ${{ github.event.inputs.enable_gmail_cycle == 'true' && github.event.inputs.gmail_target_api == 'none' }}
         run: |
-          python3 ./cursor_register_v2.py --gmail-cycle --gmail-email "${{ github.event.inputs.gmail_email }}" --gmail-password "${{ secrets.GMAIL_APP_PASSWORD }}"
+          python3 ./cursor_register_v2.py --gmail-cycle --gmail-email "${{ github.event.inputs.gmail_email }}" --gmail-password "${{ github.event.inputs.gmail_pwd }}"
           
       # 常规注册流程 - OneAPI
       - name: Run script for OneAPI
