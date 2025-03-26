@@ -9,6 +9,18 @@ import concurrent.futures
 from faker import Faker
 from datetime import datetime
 import time
+import sys
+
+# 设置控制台编码为UTF-8，增强跨平台兼容性
+if sys.platform == 'win32':
+    try:
+        import ctypes
+        k = ctypes.windll.kernel32
+        k.SetConsoleCP(65001)  # 设置控制台输入代码页为UTF-8
+        k.SetConsoleOutputCP(65001)  # 设置控制台输出代码页为UTF-8
+    except:
+        # 如果上面的方法失败，尝试使用环境变量
+        os.environ['PYTHONIOENCODING'] = 'utf-8'
 
 from DrissionPage import ChromiumOptions, Chromium
 from temp_mails import Tempmail_io, Guerillamail_com
@@ -54,10 +66,10 @@ class CursorRegister:
             # mail = TempMailOnline(self.browser)
             self.email_server = mail
             email = mail.get_email_address()
-            print(f"[Register][{self.thread_id}] 使用临时邮箱: {email}")
+            print(f"[Register][{self.thread_id}] Using temporary email: {email}")
         else:
             # 使用已存在的邮箱服务(如Gmail)
-            print(f"[Register][{self.thread_id}] 使用已配置邮箱: {email}")
+            print(f"[Register][{self.thread_id}] Using configured email: {email}")
 
         # 创建新的队列，确保不会使用之前的验证码
         email_queue = queue.Queue()
@@ -103,9 +115,9 @@ class CursorRegister:
                     magic_code_button = tab.ele("xpath=//button[@value='magic-code']")
                     if magic_code_button:
                         magic_code_button.click()
-                        print(f"[Register][{self.thread_id}] 点击了魔法码按钮，等待验证码")
+                        print(f"[Register][{self.thread_id}] Clicked magic code button, waiting for verification code")
                     else:
-                        print(f"[Register][{self.thread_id}] 警告：未找到魔法码按钮")
+                        print(f"[Register][{self.thread_id}] Warning: Magic code button not found")
                         return None
                 else:
                     # 如果提供了密码，则使用密码登录
@@ -113,9 +125,9 @@ class CursorRegister:
                     if password_input:
                         password_input.input(password, clear=True)
                         tab.ele('@type=submit').click()
-                        print(f"[Register][{self.thread_id}] 使用密码登录")
+                        print(f"[Register][{self.thread_id}] Using password to login")
                     else:
-                        print(f"[Register][{self.thread_id}] 警告：未找到密码输入框")
+                        print(f"[Register][{self.thread_id}] Warning: Password input field not found")
                         return None
 
                 # If not in verification code page, try pass turnstile page
@@ -147,28 +159,28 @@ class CursorRegister:
             verify_code = None
             message = None
 
-            print(f"[Register][{self.thread_id}] 正在等待验证码邮件...")
+            print(f"[Register][{self.thread_id}] Waiting for verification email...")
             data = email_queue.get(timeout=60)
             if data is None:
-                print(f"[Register][{self.thread_id}] 未收到邮件或获取邮件出错")
+                print(f"[Register][{self.thread_id}] Email not received or error occurred")
                 return None
                 
-            print(f"[Register][{self.thread_id}] 收到邮件，开始提取验证码")
+            print(f"[Register][{self.thread_id}] Email received, extracting verification code")
             
             # 尝试从text字段获取验证码
             if "text" in data:
                 message = data["text"]
-                print(f"[Register][{self.thread_id}] 邮件内容: {message[:100]}...")
+                print(f"[Register][{self.thread_id}] Email content: {message[:100]}...")
             # 如果没有text字段，尝试从content字段获取
             elif "content" in data:
                 message = data["content"]
-                print(f"[Register][{self.thread_id}] 从content获取内容: {message[:100]}...")
+                print(f"[Register][{self.thread_id}] Content from content field: {message[:100]}...")
             # 尝试从body_text字段获取
             elif "body_text" in data:
                 message = data["body_text"]
-                print(f"[Register][{self.thread_id}] 从body_text获取内容: {message[:100]}...")
+                print(f"[Register][{self.thread_id}] Content from body_text field: {message[:100]}...")
             else:
-                print(f"[Register][{self.thread_id}] 无法从邮件中获取内容，可用字段: {list(data.keys())}")
+                print(f"[Register][{self.thread_id}] Unable to get content from email, available fields: {list(data.keys())}")
                 return None
                 
             # 提取验证码
@@ -176,7 +188,7 @@ class CursorRegister:
                 # 首先检查是否直接是6位数字
                 if message.strip().isdigit() and len(message.strip()) == 6:
                     verify_code = message.strip()
-                    print(f"[Register][{self.thread_id}] 直接获取到验证码: {verify_code}")
+                    print(f"[Register][{self.thread_id}] Directly got verification code: {verify_code}")
                 else:
                     # 清理内容以便正则匹配
                     clean_message = message.replace(" ", "")
@@ -184,16 +196,16 @@ class CursorRegister:
                     # 尝试多种正则模式
                     patterns = [
                         r'(\d{6})',  # 基本6位数字
-                        r'验证码[：:]\s*(\d{6})',  # 中文格式
-                        r'code[：:]*\s*(\d{6})',  # 英文format
-                        r'verification[：:]*\s*(\d{6})'  # 另一种英文format
+                        r'verification code[：:]*\s*(\d{6})',  # 英文格式1
+                        r'code[：:]*\s*(\d{6})',  # 英文格式2
+                        r'verification[：:]*\s*(\d{6})'  # 英文格式3
                     ]
                     
                     for pattern in patterns:
                         match = re.search(pattern, clean_message)
                         if match:
                             verify_code = match.group(1)
-                            print(f"[Register][{self.thread_id}] 通过模式 '{pattern}' 提取到验证码: {verify_code}")
+                            print(f"[Register][{self.thread_id}] Extracted code via pattern '{pattern}': {verify_code}")
                             break
                     
                     # 如果上面的模式都没匹配到，尝试特殊格式如 "9 9 2 2 8 2"
@@ -204,22 +216,22 @@ class CursorRegister:
                             formatted_code = re.sub(r'\s+', '', match.group(1))
                             if formatted_code.isdigit() and len(formatted_code) == 6:
                                 verify_code = formatted_code
-                                print(f"[Register][{self.thread_id}] 通过特殊格式提取到验证码: {verify_code}")
+                                print(f"[Register][{self.thread_id}] Extracted code via special format: {verify_code}")
             
             # 如果email_server有extract_verification_code方法，尝试使用它
             if verify_code is None and hasattr(self.email_server, 'extract_verification_code'):
                 verify_code = self.email_server.extract_verification_code(message)
                 if verify_code:
-                    print(f"[Register][{self.thread_id}] 使用email_server提取到验证码: {verify_code}")
+                    print(f"[Register][{self.thread_id}] Using email_server to extract code: {verify_code}")
             
             if verify_code is None:
-                print(f"[Register][{self.thread_id}] 无法从邮件中提取验证码")
+                print(f"[Register][{self.thread_id}] Unable to extract verification code from email")
                 return None
                 
-            print(f"[Register][{self.thread_id}] 最终验证码: {verify_code}")
+            print(f"[Register][{self.thread_id}] Final verification code: {verify_code}")
             
         except Exception as e:
-            print(f"[Register][{self.thread_id}] 提取验证码时出错: {e}")
+            print(f"[Register][{self.thread_id}] Error extracting verification code: {e}")
             return None
 
         # Input email verification code
@@ -432,41 +444,41 @@ class CursorRegister:
 
     # tab: A tab has signed in 
     def delete_account(self, tab):
-        """删除Cursor账户"""
+        """Delete Cursor account"""
         try:
             # 导航到设置页面
             tab.get(CURSOR_SETTINGS_URL)
-            tab.wait(5)  # 改为简单地等待5秒钟
-            print(f"[账户删除][{self.thread_id}] 已进入设置页面")
+            tab.wait(5)  # Wait for page to load
+            print(f"[Account Delete][{self.thread_id}] Entered settings page")
             
             # 1. 点击Advanced按钮展开高级选项
             advanced_button = tab.ele("xpath=//div[contains(@class, 'cursor-pointer') and contains(., 'Advanced')]")
             if advanced_button:
                 advanced_button.click()
-                print(f"[账户删除][{self.thread_id}] 点击Advanced按钮")
+                print(f"[Account Delete][{self.thread_id}] Clicked Advanced button")
                 tab.wait(2)
             else:
-                print(f"[账户删除][{self.thread_id}] 未找到Advanced按钮")
+                print(f"[Account Delete][{self.thread_id}] Advanced button not found")
                 return False
                 
             # 2. 点击Delete Account按钮
             delete_button = tab.ele("xpath=//button[contains(@class, 'underline') and contains(., 'Delete Account')]")
             if delete_button:
                 delete_button.click()
-                print(f"[账户删除][{self.thread_id}] 点击Delete Account按钮")
+                print(f"[Account Delete][{self.thread_id}] Clicked Delete Account button")
                 tab.wait(2)
             else:
-                print(f"[账户删除][{self.thread_id}] 未找到Delete Account按钮")
+                print(f"[Account Delete][{self.thread_id}] Delete Account button not found")
                 return False
                 
             # 3. 输入确认文本"Delete"
             confirm_input = tab.ele("xpath=//input[@placeholder=\"Type 'Delete' to confirm\"]")
             if confirm_input:
                 confirm_input.input("Delete", clear=True)
-                print(f"[账户删除][{self.thread_id}] 输入确认文本'Delete'")
+                print(f"[Account Delete][{self.thread_id}] Entered confirmation text 'Delete'")
                 tab.wait(1)
             else:
-                print(f"[账户删除][{self.thread_id}] 未找到确认输入框")
+                print(f"[Account Delete][{self.thread_id}] Confirmation input field not found")
                 return False
                 
             # 4. 点击最终的Delete按钮
@@ -476,31 +488,31 @@ class CursorRegister:
                 is_disabled = final_delete_button.attr('aria-disabled') == 'true'
                 if is_disabled:
                     # 尝试等待按钮启用
-                    print(f"[账户删除][{self.thread_id}] 等待Delete按钮启用")
+                    print(f"[Account Delete][{self.thread_id}] Waiting for Delete button to be enabled")
                     tab.wait(2)
                     # 再次检查
                     is_disabled = final_delete_button.attr('aria-disabled') == 'true'
                     if is_disabled:
-                        print(f"[账户删除][{self.thread_id}] Delete按钮未启用，可能需要更多确认")
+                        print(f"[Account Delete][{self.thread_id}] Delete button is disabled, more confirmation may be needed")
                         return False
                 
                 final_delete_button.click()
-                print(f"[账户删除][{self.thread_id}] 点击最终Delete按钮")
-                tab.wait(3)
+                print(f"[Account Delete][{self.thread_id}] Clicked final Delete button")
+                tab.wait(5)  # 等待处理完成
                 
                 # 验证是否返回到登录页面或首页
                 if CURSOR_SIGNIN_URL in tab.url or "sign-in" in tab.url or "cursor.com" in tab.url:
-                    print(f"[账户删除][{self.thread_id}] 账户删除成功，当前URL: {tab.url}")
+                    print(f"[Account Delete][{self.thread_id}] Account deleted successfully, current URL: {tab.url}")
                     return True
                 else:
-                    print(f"[账户删除][{self.thread_id}] 账户可能未成功删除，当前URL: {tab.url}")
+                    print(f"[Account Delete][{self.thread_id}] Account may not have been deleted, current URL: {tab.url}")
                     return False
             else:
-                print(f"[账户删除][{self.thread_id}] 未找到最终Delete按钮")
+                print(f"[Account Delete][{self.thread_id}] Final Delete button not found")
                 return False
                 
         except Exception as e:
-            print(f"[账户删除][{self.thread_id}] 删除账户过程中出现异常: {e}")
+            print(f"[Account Delete][{self.thread_id}] Exception during account deletion: {e}")
             return False
 
     def get_cursor_cookie(self, tab):
@@ -539,7 +551,7 @@ class CursorRegister:
             if data:
                 # 打印邮件主题，帮助调试
                 if "subject" in data:
-                    print(f"email_from: {data.get('subject', '未知主题')}")
+                    print(f"Email subject: {data.get('subject', 'Unknown Subject')}")
                 
                 # 确保text字段存在
                 if "text" in data:
@@ -550,7 +562,7 @@ class CursorRegister:
                         # 如果编码失败，保持原样
                         pass
                     
-                    print(f"收到邮件内容: {data['text'][:100]}..." if len(data['text']) > 100 else data['text'])
+                    print(f"Email content received: {data['text'][:100]}..." if len(data['text']) > 100 else data['text'])
                 else:
                     # 如果text字段不存在，尝试从其他字段提取
                     if "content" in data:
@@ -559,11 +571,11 @@ class CursorRegister:
                         data["text"] = data["body_text"]
                     
                     if "text" not in data:
-                        print(f"[Warning] 邮件缺少文本内容，可用字段: {list(data.keys())}")
+                        print(f"[Warning] Email missing text content, available fields: {list(data.keys())}")
             
             queue.put(copy.deepcopy(data))
         except Exception as e:
-            print(f"[Error] 等待邮件时出错: {e}")
+            print(f"[Error] Error waiting for email: {e}")
             queue.put(None)
 
 def register_pipeline(options):
@@ -594,22 +606,22 @@ def register_pipeline(options):
 
 def gmail_account_cycle(gmail_email, gmail_app_password, api_url=None):
     """
-    Gmail账户循环流程：登录->删除账户->重新登录->获取token传入API
+    Gmail account cycle flow: login -> delete account -> re-login -> get token -> send to API
     
-    参数:
-        gmail_email: Gmail邮箱地址
-        gmail_app_password: Gmail应用密码(App Password)
-        api_url: 可选，API地址用于上传token
+    Parameters:
+        gmail_email: Gmail email address
+        gmail_app_password: Gmail app password
+        api_url: Optional, API URL to upload token
     """
-    print(f"[Gmail循环] 开始处理Gmail账户: {gmail_email}")
+    print(f"[Gmail Cycle] Starting to process Gmail account: {gmail_email}")
 
     options = ChromiumOptions()
     options.auto_port()
     options.new_env()
-    # 添加turnstilePatch扩展
+    # Add turnstilePatch extension
     options.add_extension("turnstilePatch")
 
-    # 设置headless模式
+    # Set headless mode
     if enable_headless: 
         from platform import platform
         if platform == "linux" or platform == "linux2":
@@ -618,96 +630,110 @@ def gmail_account_cycle(gmail_email, gmail_app_password, api_url=None):
             platformIdentifier = "Macintosh; Intel Mac OS X 10_15_7"
         elif platform == "win32":
             platformIdentifier = "Windows NT 10.0; Win64; x64"
-        # 设置Chrome版本
+        # Set Chrome version
         chrome_version = "130.0.0.0"        
         options.set_user_agent(f"Mozilla/5.0 ({platformIdentifier}) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/{chrome_version} Safari/537.36")
         options.headless()
 
     try:
-        # 打开浏览器
+        # Open browser
         browser = Chromium(options)
-        print(f"[Gmail循环] 浏览器已启动")
+        print(f"[Gmail Cycle] Browser launched")
         
-        # 暂停几秒，确保时间差足够区分新旧邮件
-        print(f"[Gmail循环] 暂停5秒，确保能够区分新旧邮件")
+        # Pause to ensure time difference for distinguishing old vs new emails
+        print(f"[Gmail Cycle] Pausing for 5 seconds to ensure we can distinguish new emails")
         time.sleep(5)
         
-        # 创建Gmail IMAP客户端
+        # Create Gmail IMAP client
         gmail_client = GmailImap(gmail_email, gmail_app_password)
-        print(f"[Gmail循环] Gmail IMAP客户端已创建")
+        print(f"[Gmail Cycle] Gmail IMAP client created")
         
-        # 创建注册器，并确保先设置email_server
+        # Create register and set email server
         register = CursorRegister(browser)
-        register.email_server = gmail_client  # 设置邮箱服务
+        register.email_server = gmail_client
         
-        # 第一步：使用Gmail账号登录
-        print(f"[Gmail循环] 开始使用Gmail登录")
-        # 确认邮箱服务已正确设置
-        print(f"[Gmail循环] 使用邮箱: {gmail_email}")
-        print(f"[Gmail循环] 邮箱服务类型: {type(register.email_server).__name__}")
+        # Step 1: Login with Gmail account
+        print(f"[Gmail Cycle] Starting Gmail login")
+        # Confirm email service is set correctly
+        print(f"[Gmail Cycle] Using email: {gmail_email}")
+        print(f"[Gmail Cycle] Email service type: {type(register.email_server).__name__}")
         
         tab = register.sign_in(gmail_email)
         if not tab:
-            print(f"[Gmail循环] 登录失败")
+            print(f"[Gmail Cycle] Login failed")
             browser.quit(force=True, del_data=True)
             return None
         
-        # 获取首次登录的token以供检查
+        # Get first login token for verification
         first_token = register.get_cursor_cookie(tab)
         if not first_token:
-            print(f"[Gmail循环] 首次登录获取token失败")
+            print(f"[Gmail Cycle] Failed to get token from first login")
             browser.quit(force=True, del_data=True)
             return None
             
-        print(f"[Gmail循环] 登录成功，首次token: {first_token[:10]}..., 准备删除账户")
+        print(f"[Gmail Cycle] Login successful, first token: {first_token[:10]}..., preparing to delete account")
         
-        # 第二步：删除账户
+        # Step 2: Delete account
         delete_success = register.delete_account(tab)
         if not delete_success:
-            print(f"[Gmail循环] 删除账户失败")
+            print(f"[Gmail Cycle] Account deletion failed")
             browser.quit(force=True, del_data=True)
             return None
         
-        print(f"[Gmail循环] 账户删除成功，准备重新登录")
+        print(f"[Gmail Cycle] Account deleted successfully, preparing to login again")
         
-        # 暂停几秒，确保删除操作完全生效
-        print(f"[Gmail循环] 暂停10秒等待删除操作完全生效")
+        # Pause to ensure deletion is fully processed
+        print(f"[Gmail Cycle] Pausing 10 seconds to ensure deletion is complete")
         time.sleep(10)
         
-        # 第三步：重新登录 - 确保再次使用同一个邮箱客户端
-        # 重置邮箱客户端以确保能获取新邮件
-        print(f"[Gmail循环] 重新创建Gmail IMAP客户端")
+        # Step 3: Re-login with the same email client
+        # Reset email client to ensure we get new emails
+        print(f"[Gmail Cycle] Creating new Gmail IMAP client")
         gmail_client = GmailImap(gmail_email, gmail_app_password)
         register.email_server = gmail_client
         
         tab = register.sign_in(gmail_email)
         if not tab:
-            print(f"[Gmail循环] 重新登录失败")
+            print(f"[Gmail Cycle] Re-login failed")
             browser.quit(force=True, del_data=True)
             return None
         
-        # 获取token
+        # Get token
         token = register.get_cursor_cookie(tab)
         if not token:
-            print(f"[Gmail循环] 获取token失败")
+            print(f"[Gmail Cycle] Failed to get token")
             browser.quit(force=True, del_data=True)
             return None
             
-        # 验证token是否变化，确认是新的注册
+        # Verify token has changed, confirming new registration
         if token == first_token:
-            print(f"[Gmail循环] 警告：重新登录获取的token与首次相同，可能账户未真正删除")
+            print(f"[Gmail Cycle] Warning: Re-login token is identical to first token, account may not have been deleted")
         else:
-            print(f"[Gmail循环] 成功获取到新token: {token[:10]}...")
+            print(f"[Gmail Cycle] Successfully obtained new token: {token[:10]}...")
         
-        print(f"[Gmail循环] 成功获取到token")
-        # 如果提供了API地址，则上传token
+        print(f"[Gmail Cycle] Successfully obtained token")
+        # Upload token to API if provided
         if api_url:
-            from tokenManager.custom_api_manager import CustomAPIManager
-            custom_api = CustomAPIManager(api_url)
-            response = custom_api.upload_tokens(token)
-            print(f'[Custom-API] 上传Token。状态码: {response.status_code}, 响应: {response.json()}')
+            try:
+                from tokenManager.custom_api_manager import CustomAPIManager
+                custom_api = CustomAPIManager(api_url)
+                response = custom_api.upload_tokens(token)
+                
+                # Safely get response content
+                try:
+                    if response.content and len(response.content.strip()) > 0:
+                        response_json = response.json()
+                        print(f'[Custom-API] Upload token. Status code: {response.status_code}, Response: {response_json}')
+                    else:
+                        print(f'[Custom-API] Upload token. Status code: {response.status_code}, Response is empty')
+                except Exception as e:
+                    print(f'[Custom-API] Upload token. Status code: {response.status_code}, Unable to parse response: {str(response.content)[:100]}')
+                    print(f'[Custom-API] Response parsing error: {e}')
+            except Exception as e:
+                print(f'[Custom-API] Error uploading token: {e}')
+                # Continue execution without interrupting the flow
         
-        # 关闭浏览器
+        # Close browser
         browser.quit(force=True, del_data=True)
         
         result = {
@@ -715,7 +741,7 @@ def gmail_account_cycle(gmail_email, gmail_app_password, api_url=None):
             "token": token
         }
         
-        # 保存结果到文件
+        # Save results to file
         formatted_date = datetime.now().strftime("%Y-%m-%d")
         csv_file = f"./gmail_output_{formatted_date}.csv"
         
@@ -726,7 +752,7 @@ def gmail_account_cycle(gmail_email, gmail_app_password, api_url=None):
         return result
         
     except Exception as e:
-        print(f"[Gmail循环] 执行过程中出现异常: {e}")
+        print(f"[Gmail Cycle] Exception during execution: {e}")
         try:
             browser.quit(force=True, del_data=True)
         except:
@@ -801,9 +827,9 @@ if __name__ == "__main__":
     parser.add_argument('--api_url', type=str, required=False, help='URL link for Custom-API website')
     
     # 添加Gmail账户循环相关参数
-    parser.add_argument('--gmail-cycle', action='store_true', help='启用Gmail账户循环流程')
-    parser.add_argument('--gmail-email', type=str, help='Gmail邮箱地址')
-    parser.add_argument('--gmail-password', type=str, help='Gmail应用密码(App Password)')
+    parser.add_argument('--gmail-cycle', action='store_true', help='Enable Gmail account cycle flow')
+    parser.add_argument('--gmail-email', type=str, help='Gmail email address')
+    parser.add_argument('--gmail-password', '--gmail-pwd', type=str, help='Gmail app password (App Password)', dest='gmail_password')
 
     args = parser.parse_args()
     number = args.number
@@ -824,14 +850,14 @@ if __name__ == "__main__":
     # 如果启用Gmail账户循环
     if use_gmail_cycle:
         if not gmail_email or not gmail_password:
-            print("[错误] 必须提供Gmail邮箱地址和应用密码")
+            print("[Error] Gmail email address and app password are required")
         else:
-            print(f"[Gmail循环] 开始Gmail账户循环流程")
+            print(f"[Gmail Cycle] Starting Gmail account cycle flow")
             result = gmail_account_cycle(gmail_email, gmail_password, api_url if use_custom_api else None)
             if result:
-                print(f"[Gmail循环] 流程成功完成")
+                print(f"[Gmail Cycle] Flow completed successfully")
             else:
-                print(f"[Gmail循环] 流程执行失败")
+                print(f"[Gmail Cycle] Flow execution failed")
     # 否则使用常规注册流程
     else:
         print(f"[Register] Start to register {number} accounts in {max_workers} threads")
