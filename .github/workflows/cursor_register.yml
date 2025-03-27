@@ -48,19 +48,19 @@ jobs:
           pip3 install -r ./requirements.txt
           
       # Email循环流程 - 使用OneAPI
-      - name: Run Gmail cycle with OneAPI
+      - name: Run Email cycle with OneAPI
         if: ${{ github.event.inputs.email-cycle == 'true' && github.event.inputs.ingest_to_oneapi == 'true' }}
         run: |
           python3 ./cursor_register_v2.py --email-cycle --email "${{ github.event.inputs.email }}" --password "${{ github.event.inputs.password }}" --oneapi --oneapi_url "${{ secrets.CURSOR_ONEAPI_URL }}" --oneapi_token "${{ secrets.CURSOR_ONEAPI_TOKEN }}" --oneapi_channel_url "${{ secrets.CURSOR_CHANNEL_URL }}"
           
       # Email循环流程 - 使用Custom API
-      - name: Run Gmail cycle with Custom API
+      - name: Run Email cycle with Custom API
         if: ${{ github.event.inputs.email-cycle == 'true' && github.event.inputs.ingest_to_custom_api == 'true' }}
         run: |
           python3 ./cursor_register_v2.py --email-cycle --email "${{ github.event.inputs.email }}" --gmail-password "${{ github.event.inputs.password }}" --custom-api --api_url "${{ secrets.CUSTOM_API_URL }}"
           
       # Email循环流程 - 不使用API
-      - name: Run Gmail cycle without API
+      - name: Run Email cycle without API
         if: ${{ github.event.inputs.email-cycle == 'true'  && github.event.inputs.ingest_to_oneapi == 'false' && github.event.inputs.ingest_to_custom_api == 'false' && github.event.inputs.upload_artifact == 'true' }}
         run: |
           python3 ./cursor_register_v2.py --email-cycle --email "${{ github.event.inputs.email }}" --password "${{ github.event.inputs.password }}"
