@@ -52,7 +52,7 @@ from temp_mails import Tempmail_io, Guerillamail_com
 from helper.email.minuteinbox_com import Minuteinboxcom
 from helper.email.etempmail import EtempMail
 from helper.email.tempmailonline import TempMailOnline
-from helper.email.gmail_imap import GmailImap
+from helper.email.gmail_imap import UniversalImap
 from helper.email import EmailServer
 
 CURSOR_URL = "https://www.cursor.com/"
@@ -629,16 +629,18 @@ def register_pipeline(options):
         "token": token
     }
 
-def gmail_account_cycle(gmail_email, gmail_app_password, api_url=None):
+def universal_email_cycle(email, app_password, api_url=None):
     """
-    Gmail account cycle flow: login -> delete account -> re-login -> get token -> send to API
+    Universal email account cycle flow: login -> delete account -> re-login -> get token -> send to API
+    支持多种邮箱服务商，如Gmail, QQ邮箱, 163邮箱等
     
     Parameters:
-        gmail_email: Gmail email address
-        gmail_app_password: Gmail app password
+        email: 邮箱地址
+        app_password: 邮箱应用密码
         api_url: Optional, API URL to upload token
     """
-    safe_print(f"[Gmail Cycle] Starting to process Gmail account: {gmail_email}")
+    domain = email.split('@')[-1].lower() if '@' in email else "unknown"
+    safe_print(f"[Email Cycle] Starting to process email account: {email} (domain: {domain})")
 
     options = ChromiumOptions()
     options.auto_port()
@@ -663,80 +665,80 @@ def gmail_account_cycle(gmail_email, gmail_app_password, api_url=None):
     try:
         # Open browser
         browser = Chromium(options)
-        safe_print(f"[Gmail Cycle] Browser launched")
+        safe_print(f"[Email Cycle] Browser launched")
         
         # Pause to ensure time difference for distinguishing old vs new emails
-        safe_print(f"[Gmail Cycle] Pausing for 5 seconds to ensure we can distinguish new emails")
+        safe_print(f"[Email Cycle] Pausing for 5 seconds to ensure we can distinguish new emails")
         time.sleep(5)
         
-        # Create Gmail IMAP client
-        gmail_client = GmailImap(gmail_email, gmail_app_password)
-        safe_print(f"[Gmail Cycle] Gmail IMAP client created")
+        # 创建通用IMAP客户端
+        email_client = UniversalImap(email, app_password)
+        safe_print(f"[Email Cycle] Universal IMAP client created for {domain}")
         
         # Create register and set email server
         register = CursorRegister(browser)
-        register.email_server = gmail_client
+        register.email_server = email_client
         
-        # Step 1: Login with Gmail account
-        safe_print(f"[Gmail Cycle] Starting Gmail login")
+        # Step 1: Login with email account
+        safe_print(f"[Email Cycle] Starting email login")
         # Confirm email service is set correctly
-        safe_print(f"[Gmail Cycle] Using email: {gmail_email}")
-        safe_print(f"[Gmail Cycle] Email service type: {type(register.email_server).__name__}")
+        safe_print(f"[Email Cycle] Using email: {email}")
+        safe_print(f"[Email Cycle] Email service type: {type(register.email_server).__name__}")
         
-        tab = register.sign_in(gmail_email)
+        tab = register.sign_in(email)
         if not tab:
-            safe_print(f"[Gmail Cycle] Login failed")
+            safe_print(f"[Email Cycle] Login failed")
             browser.quit(force=True, del_data=True)
             return None
         
         # Get first login token for verification
         first_token = register.get_cursor_cookie(tab)
         if not first_token:
-            safe_print(f"[Gmail Cycle] Failed to get token from first login")
+            safe_print(f"[Email Cycle] Failed to get token from first login")
             browser.quit(force=True, del_data=True)
             return None
             
-        safe_print(f"[Gmail Cycle] Login successful, first token: {first_token[:10]}..., preparing to delete account")
+        safe_print(f"[Email Cycle] Login successful, first token: {first_token[:10]}..., preparing to delete account")
         
         # Step 2: Delete account
         delete_success = register.delete_account(tab)
         if not delete_success:
-            safe_print(f"[Gmail Cycle] Account deletion failed")
+            safe_print(f"[Email Cycle] Account deletion failed")
             browser.quit(force=True, del_data=True)
             return None
         
-        safe_print(f"[Gmail Cycle] Account deleted successfully, preparing to login again")
+        safe_print(f"[Email Cycle] Account deleted successfully, preparing to login again")
         
         # Pause to ensure deletion is fully processed
-        safe_print(f"[Gmail Cycle] Pausing 10 seconds to ensure deletion is complete")
+        safe_print(f"[Email Cycle] Pausing 10 seconds to ensure deletion is complete")
         time.sleep(10)
         
         # Step 3: Re-login with the same email client
         # Reset email client to ensure we get new emails
-        safe_print(f"[Gmail Cycle] Creating new Gmail IMAP client")
-        gmail_client = GmailImap(gmail_email, gmail_app_password)
-        register.email_server = gmail_client
+        safe_print(f"[Email Cycle] Creating new Universal IMAP client")
+        email_client = UniversalImap(email, app_password)
+        register.email_server = email_client
         
-        tab = register.sign_in(gmail_email)
+        tab = register.sign_in(email)
         if not tab:
-            safe_print(f"[Gmail Cycle] Re-login failed")
+            safe_print(f"[Email Cycle] Re-login failed")
             browser.quit(force=True, del_data=True)
             return None
         
         # Get token
         token = register.get_cursor_cookie(tab)
         if not token:
-            safe_print(f"[Gmail Cycle] Failed to get token")
+            safe_print(f"[Email Cycle] Failed to get token")
             browser.quit(force=True, del_data=True)
             return None
             
         # Verify token has changed, confirming new registration
         if token == first_token:
-            safe_print(f"[Gmail Cycle] Warning: Re-login token is identical to first token, account may not have been deleted")
+            safe_print(f"[Email Cycle] Warning: Re-login token is identical to first token, account may not have been deleted")
         else:
-            safe_print(f"[Gmail Cycle] Successfully obtained new token: {token[:10]}...")
+            safe_print(f"[Email Cycle] Successfully obtained new token: {token[:10]}...")
         
-        safe_print(f"[Gmail Cycle] Successfully obtained token")
+        safe_print(f"[Email Cycle] Successfully obtained token")
         # Upload token to API if provided
         if api_url:
             try:
@@ -762,13 +764,13 @@ def gmail_account_cycle(gmail_email, gmail_app_password, api_url=None):
         browser.quit(force=True, del_data=True)
         
         result = {
-            "email": gmail_email,
+            "email": email,
             "token": token
         }
         
         # Save results to file
         formatted_date = datetime.now().strftime("%Y-%m-%d")
-        csv_file = f"./gmail_output_{formatted_date}.csv"
+        csv_file = f"./email_output_{formatted_date}.csv"
         
         with open(csv_file, 'a', newline='') as file:
             writer = csv.DictWriter(file, fieldnames=["email", "token"])
@@ -777,12 +779,13 @@ def gmail_account_cycle(gmail_email, gmail_app_password, api_url=None):
         return result
         
     except Exception as e:
-        safe_print(f"[Gmail Cycle] Exception during execution: {e}")
+        safe_print(f"[Email Cycle] Exception during execution: {e}")
         try:
             browser.quit(force=True, del_data=True)
         except:
             pass
         return None
+
 
 def register_cursor(number, max_workers):
 
@@ -851,11 +854,12 @@ if __name__ == "__main__":
     parser.add_argument('--custom-api', action='store_true', help='Enable Custom-API or not')
     parser.add_argument('--api_url', type=str, required=False, help='URL link for Custom-API website')
     
-    # 添加Gmail账户循环相关参数
-    parser.add_argument('--gmail-cycle', action='store_true', help='Enable Gmail account cycle flow')
-    parser.add_argument('--gmail-email', type=str, help='Gmail email address')
-    parser.add_argument('--gmail-password', '--gmail-pwd', type=str, help='Gmail app password (App Password)', dest='gmail_password')
-
+    # 邮箱循环命令
+    parser.add_argument('--email-cycle',action='store_true', help='使用邮箱账户循环注册')
+    parser.add_argument('--email', type=str, required=True, help='邮箱地址')
+    parser.add_argument('--password', type=str, required=True, help='邮箱应用密码')
+    parser.add_argument('--api', type=str, help='上传token的API URL')
+    
     args = parser.parse_args()
     number = args.number
     max_workers = args.max_workers
@@ -867,22 +871,22 @@ if __name__ == "__main__":
     use_custom_api = args.custom_api
     api_url = args.api_url
     
-    # Gmail账户循环流程选项
-    use_gmail_cycle = args.gmail_cycle
-    gmail_email = args.gmail_email
-    gmail_password = args.gmail_password
+    # Email循环流程选项
+    use_email_cycle = args.email_cycle
+    email_account = args.email
+    email_password = args.password
 
-    # 如果启用Gmail账户循环
-    if use_gmail_cycle:
-        if not gmail_email or not gmail_password:
-            safe_print("[Error] Gmail email address and app password are required")
+    # 如果启用Email账户循环
+    if use_email_cycle:
+        if not email_account or not email_password:
+            safe_print("[Error] Email address and app password are required")
         else:
-            safe_print(f"[Gmail Cycle] Starting Gmail account cycle flow")
-            result = gmail_account_cycle(gmail_email, gmail_password, api_url if use_custom_api else None)
+            safe_print(f"[Email Cycle] Starting Email account cycle flow")
+            result = universal_email_cycle(email_account, email_password, api_url if use_custom_api else None)
             if result:
-                safe_print(f"[Gmail Cycle] Flow completed successfully")
+                safe_print(f"[Email Cycle] Flow completed successfully")
             else:
-                safe_print(f"[Gmail Cycle] Flow execution failed")
+                safe_print(f"[Email Cycle] Flow execution failed")
     # 否则使用常规注册流程
     else:
         safe_print(f"[Register] Start to register {number} accounts in {max_workers} threads")
