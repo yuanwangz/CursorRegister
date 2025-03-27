@@ -57,7 +57,7 @@ jobs:
       - name: Run Email cycle with Custom API
         if: ${{ github.event.inputs.email-cycle == 'true' && github.event.inputs.ingest_to_custom_api == 'true' }}
         run: |
-          python3 ./cursor_register_v2.py --email-cycle --email "${{ github.event.inputs.email }}" --gmail-password "${{ github.event.inputs.password }}" --custom-api --api_url "${{ secrets.CUSTOM_API_URL }}"
+          python3 ./cursor_register_v2.py --email-cycle --email "${{ github.event.inputs.email }}" --password "${{ github.event.inputs.password }}" --custom-api --api_url "${{ secrets.CUSTOM_API_URL }}"
           
       # Email循环流程 - 不使用API
       - name: Run Email cycle without API
