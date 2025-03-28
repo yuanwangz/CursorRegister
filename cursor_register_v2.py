@@ -52,7 +52,7 @@ from temp_mails import Tempmail_io, Guerillamail_com
 from helper.email.minuteinbox_com import Minuteinboxcom
 from helper.email.etempmail import EtempMail
 from helper.email.tempmailonline import TempMailOnline
-from helper.email.gmail_imap import UniversalImap
+from helper.email.universal_imap import UniversalImap
 from helper.email import EmailServer
 
 CURSOR_URL = "https://www.cursor.com/"
