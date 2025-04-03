@@ -54,6 +54,7 @@ from helper.email.etempmail import EtempMail
 from helper.email.tempmailonline import TempMailOnline
 from helper.email.universal_imap import UniversalImap
 from helper.email import EmailServer
+from helper.email.imap import Imap
 
 CURSOR_URL = "https://www.cursor.com/"
 CURSOR_SIGNIN_URL = "https://authenticator.cursor.sh"
@@ -143,7 +144,7 @@ class CursorRegister:
                         safe_print(f"[Register][{self.thread_id}] Clicked magic code button, waiting for verification code")
                     else:
                         safe_print(f"[Register][{self.thread_id}] Warning: Magic code button not found")
-                        return None
+                        # return None
                 else:
                     # 如果提供了密码，则使用密码登录
                     password_input = tab.ele("xpath=//input[@name='password']")
@@ -185,7 +186,7 @@ class CursorRegister:
             message = None
 
             safe_print(f"[Register][{self.thread_id}] Waiting for verification email...")
-            data = email_queue.get(timeout=60)
+            data = email_queue.get(timeout=90)
             if data is None:
                 safe_print(f"[Register][{self.thread_id}] Email not received or error occurred")
                 return None
@@ -499,9 +500,31 @@ class CursorRegister:
             # 3. 输入确认文本"Delete"
             confirm_input = tab.ele("xpath=//input[@placeholder=\"Type 'Delete' to confirm\"]")
             if confirm_input:
-                confirm_input.input("Delete", clear=True)
-                safe_print(f"[Account Delete][{self.thread_id}] Entered confirmation text 'Delete'")
-                tab.wait(1)
+                # 确保输入框是可交互的
+                tab.wait(2)  # 等待输入框完全加载
+                try:
+                    # 先清空输入框
+                    confirm_input.clear()
+                    tab.wait(0.5)
+                    # 逐字符输入以确保稳定性
+                    for char in "Delete":
+                        confirm_input.input(char, clear=False)
+                        tab.wait(0.1)
+                    
+                    # 验证输入内容
+                    input_value = confirm_input.attr('value')
+                    if input_value != "Delete":
+                        safe_print(f"[Account Delete][{self.thread_id}] Input verification failed. Expected 'Delete', got '{input_value}'")
+                        # 重试一次
+                        confirm_input.clear()
+                        tab.wait(0.5)
+                        confirm_input.input("Delete", clear=True)
+                        tab.wait(1)
+                    
+                    safe_print(f"[Account Delete][{self.thread_id}] Entered confirmation text 'Delete'")
+                except Exception as e:
+                    safe_print(f"[Account Delete][{self.thread_id}] Error during input: {e}")
+                    return False
             else:
                 safe_print(f"[Account Delete][{self.thread_id}] Confirmation input field not found")
                 return False
@@ -572,7 +595,7 @@ class CursorRegister:
 
     def _wait_for_new_message(self, queue, timeout=300):
         try:
-            data = self.email_server.wait_for_message(delay=1, timeout=timeout)
+            data = self.email_server.wait_for_new_message(delay=1, timeout=timeout)
             if data:
                 # 打印邮件主题，帮助调试
                 if "subject" in data:
@@ -672,7 +695,8 @@ def universal_email_cycle(email, app_password, api_url=None):
         time.sleep(5)
         
         # 创建通用IMAP客户端
-        email_client = UniversalImap(email, app_password)
+        # email_client = UniversalImap(email, app_password)
+        email_client = Imap(email, app_password)
         safe_print(f"[Email Cycle] Universal IMAP client created for {domain}")
         
         # Create register and set email server
@@ -716,7 +740,8 @@ def universal_email_cycle(email, app_password, api_url=None):
         # Step 3: Re-login with the same email client
         # Reset email client to ensure we get new emails
         safe_print(f"[Email Cycle] Creating new Universal IMAP client")
-        email_client = UniversalImap(email, app_password)
+        # email_client = UniversalImap(email, app_password)
+        email_client = Imap(email, app_password)
         register.email_server = email_client
         
         tab = register.sign_in(email)
