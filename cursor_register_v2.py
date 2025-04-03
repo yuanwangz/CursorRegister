@@ -186,7 +186,7 @@ class CursorRegister:
             message = None
 
             safe_print(f"[Register][{self.thread_id}] Waiting for verification email...")
-            data = email_queue.get(timeout=90)
+            data = email_queue.get(timeout=300)
             if data is None:
                 safe_print(f"[Register][{self.thread_id}] Email not received or error occurred")
                 return None

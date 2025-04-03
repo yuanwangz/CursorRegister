@@ -92,7 +92,7 @@ class Imap(EmailServer):
             "content": content
         }
     
-    def wait_for_new_message(self, delay=5, timeout=90):
+    def wait_for_new_message(self, delay=5, timeout=300):
         start_time = time.time()
 
         while time.time() - start_time <= timeout:
